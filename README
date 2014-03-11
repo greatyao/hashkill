@@ -1,0 +1,158 @@
+!!! DISCLAIMER !!!
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+!!! /DISCLAIMER !!!
+
+
+
+
+
+hashkill-0.2.0
+==============
+
+1. What is hashkill?
+2. Installation
+3. Features
+4. Plugins
+5. TODO
+6. Credits
+
+
+
+
+1. What is hashkill?
+====================
+
+hashkill (stupid name I know) is an open-source password cracker that uses the OpenSSL library to 
+crack different types of password hashes.
+
+Basically, its purposes are:
+
+* allow cracking lots of different types of password hashes on linux
+* employ easy to use command-line interface
+* multithreaded
+* SSE2/XOP accelerated
+* GPU accelerated
+* open-sourced, GPL-licensed
+
+Disadvantages at that moment are that it does not support GPU-based cracking. 
+
+
+
+2. Installation
+===============
+
+Everything boils down to installing the package prerequisites, ./configure && make && make install.
+
+Useful options to configure are:
+
+--datadir : the directory where all plugins, kernels, markov models and preinstalled rulesets will be placed
+--bindir  : location of the hashkill binary
+
+Build prerequisites:
+
+* gcc >=4.6
+* libc headers
+* json-c (also known as libjson0) and its headers for session save/restore support
+* proprietary AMD/NVidia drivers for GPU support and kernel compilation
+* zlib and its headers
+* openssl and its headers
+* pkgconfig
+* libtool
+* make
+
+
+
+3. Features
+===========
+
+Currently (0.2.4) hashkill supports 4 attack modes:
+
+* Markov attack (default)
+* bruteforce
+* rule
+
+hashkill supports sessions (e.g interrupted session can be restored)
+
+Currently there are 41 plugins that can crack more than 45 different hash types.
+
+And lots of bugs I guess :)
+
+
+4. Plugins
+==========
+
+The following plugins are currently available:
+
+
+apr1            Apache apr1 plugin
+desunix         DES(Unix) plugin (.htpasswd)
+dmg             FileVault (v1)  passwords plugin
+ipb2            md5(md5(salt).md5(pass)) plugin (IPB > 2.x)
+ldap-sha        LDAP SHA plugin
+ldap-ssha       LDAP SSHA (salted SHA) plugin
+lm              LM plugin
+md4             MD4 plugin
+md5-passsalt    md5(password,salt) plugin (joomla)
+md5-saltpass    md5(salt,password) plugin (osCommerce)
+md5             MD5 plugin
+md5md5          md5(md5(pass)) plugin
+md5unix         MD5(Unix) plugin (shadow files)
+mediawiki       md5(salt.'-'.md5(password)) plugin (Wikimedia)
+mscash          Domain cached credentials plugin
+mscash2         Domain cached credentials v2 plugin
+mssql-2000      Microsoft SQL Server 2000 plugin
+mssql-2005      Microsoft SQL Server 2005 plugin
+mysql5          MySQL > 4.1 plugin
+ntlm            NTLM plugin
+oracle-old      Oracle 7 up to 10r2 plugin
+oracle11g       Oracle 11g plugin
+osx-old         MacOSX <= 10.6 system passwords plugin
+osxlion         MacOSX Lion system passwords plugin
+phpbb3          phpBB3 hashes plugin
+pixmd5          Cisco PIX password hashes plugin
+privkey         SSH/SSL private key passphrase plugin
+rar             RAR3 passwords plugin
+ripemd160       RIPEMD-160 plugin
+sapg            SAP CODVN G passwords plugin
+sha1            SHA1 plugin
+sha1sha1        sha1(sha1(pass)) plugin
+sha256          SHA-256 plugin
+sha512          SHA-512 plugin
+sha512unix      SHA512(Unix) plugin (shadow files)
+sl3             Nokia SL3 plugin
+smf             SMF plugin
+vbulletin       md5(md5(pass).salt) plugin
+wordpress       Wordpress hashes plugin
+wpa             WPA-PSK plugin
+zip             ZIP passwords plugin
+
+
+For detailed info on a plugin, type:
+
+hashkill -P<plugin> (e.g hashkill -Pmd5)
+
+
+
+
+5. TODO
+=======
+
+More plugins
+
+
+6. Credits
+==========
+
+See the CREDITS file

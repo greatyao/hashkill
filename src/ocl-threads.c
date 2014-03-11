@@ -92,6 +92,7 @@ struct ocl_supported_plugins_s ocl_supported_plugins[] =
                             {1,"mssql-2012",&ocl_bruteforce_mssql_2012, &ocl_markov_mssql_2012, &ocl_rule_mssql_2012},
                             {1,"msoffice",&ocl_bruteforce_msoffice, &ocl_markov_msoffice, &ocl_rule_msoffice},
                             {1,"luks",&ocl_bruteforce_luks, &ocl_markov_luks, &ocl_rule_luks},
+							{1,"pdf",&ocl_bruteforce_pdf, &ocl_markov_pdf, &ocl_rule_pdf},
                             {0, "", NULL, NULL, NULL}
                         };
 

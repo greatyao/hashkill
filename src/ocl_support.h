@@ -252,7 +252,10 @@ hash_stat ocl_bruteforce_luks(void);
 hash_stat ocl_markov_luks(void);
 hash_stat ocl_rule_luks(void);
 
-
+/* pdf plugin support */
+hash_stat ocl_bruteforce_pdf(void);
+hash_stat ocl_markov_pdf(void);
+hash_stat ocl_rule_pdf(void);
 
 
 /* supported plugins struct array*/

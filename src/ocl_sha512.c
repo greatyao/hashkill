@@ -426,6 +426,7 @@ void* ocl_bruteforce_sha512_thread(void *arg)
 	p2.s2=p2.s6=p2.sA=p2.sE=singlehash.z;
 	p2.s3=p2.s7=p2.sB=p2.sF=singlehash.z;
     }
+   /*
    if (a==1)
    {
         mylist = hash_list;
@@ -440,7 +441,7 @@ void* ocl_bruteforce_sha512_thread(void *arg)
         Endian_Reverse64(singlehash.w);
         singlehash.w-=H3;
     }
-
+	*/
 
     // Change for other lens
     hashes  = malloc(hash_ret_len*8*MAXFOUND); 
@@ -1566,14 +1567,14 @@ hash_stat ocl_bruteforce_sha512(void)
     	    bzero(pbuf,100);
     	    char kernelfile[255];
     	    _clGetDeviceInfo(device[wthreads[i].deviceid], CL_DEVICE_NAME, sizeof(pbuf),pbuf, NULL );
-    	    if (hash_list->next) 
+    	    //if (hash_list->next) 
     	    {
     	        sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512_long__%s.bin",DATADIR,pbuf);
     	    }
-    	    else
+    	    /*else
     	    {
     	        sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512_long_S_%s.bin",DATADIR,pbuf);
-	    }
+			}*/
 
     	    char *ofname = kernel_decompress(kernelfile);
     	    if (!ofname) return hash_err;
@@ -1696,14 +1697,14 @@ hash_stat ocl_markov_sha512(void)
             bzero(pbuf,100);
             char kernelfile[255];
             _clGetDeviceInfo(device[wthreads[i].deviceid], CL_DEVICE_NAME, sizeof(pbuf),pbuf, NULL );
-            if (hash_list->next) 
+            //if (hash_list->next) 
             {
         	sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512_long__%s.bin",DATADIR,pbuf);
     	    }
-    	    else
+    	    /*else
     	    {
         	sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512_long_S_%s.bin",DATADIR,pbuf);
-	    }
+	    }*/
 
     	    char *ofname = kernel_decompress(kernelfile);
             if (!ofname) return hash_err;
@@ -1827,14 +1828,14 @@ hash_stat ocl_rule_sha512(void)
             bzero(pbuf,100);
             char kernelfile[255];
             _clGetDeviceInfo(device[wthreads[i].deviceid], CL_DEVICE_NAME, sizeof(pbuf),pbuf, NULL );
-            if (hash_list->next) 
+            //if (hash_list->next) 
             {
         	sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512__%s.bin",DATADIR,pbuf);
     	    }
-    	    else
+    	    /*else
     	    {
         	sprintf(kernelfile,"%s/hashkill/kernels/amd_sha512_S_%s.bin",DATADIR,pbuf);
-	    }
+	    }*/
 
     	    char *ofname = kernel_decompress(kernelfile);
             if (!ofname) return hash_err;

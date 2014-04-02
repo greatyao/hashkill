@@ -210,7 +210,7 @@ hash_stat hash_plugin_parse_hash(char *hashline, char *filename)
     char *myline;
 
     init_keytab();
-    myfile = open(filename, O_RDONLY);
+    myfile = open(filename, O_RDONLY|O_LARGEFILE);
     if (myfile<1) 
     {
 	return hash_err;

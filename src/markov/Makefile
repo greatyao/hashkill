@@ -1,5 +1,5 @@
 ifneq ($(DESTDIR),"")
-    IDESTDIR=$(DESTDIR)
+    IDESTDIR=$(DESTDIR)/
 endif
 
 

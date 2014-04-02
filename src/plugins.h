@@ -40,7 +40,7 @@ hash_stat print_plugins_summary(char *plugindir);
 void print_plugin_detailed(char *plugin);
 
 /* current plugin get/set/load */
-const char *get_current_plugin(void);
+char *get_current_plugin(void);
 void set_current_plugin(const char *pluginname);
 hash_stat load_plugin(void);
 

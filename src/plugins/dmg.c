@@ -17,10 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
-#define _GNU_SOURCE
 #include <string.h>
 #include <alloca.h>
 #include <fcntl.h>
@@ -100,6 +98,7 @@ static cencrypted_v2_pwheader header2;
 static void header_byteorder_fix(cencrypted_v1_header *hdr) 
 {
     hdr->kdf_iteration_count = htonl(hdr->kdf_iteration_count);
+    if (hdr->kdf_iteration_count == 0 ) hdr->kdf_iteration_count = 1000;
     hdr->kdf_salt_len = htonl(hdr->kdf_salt_len);
     hdr->len_wrapped_aes_key = htonl(hdr->len_wrapped_aes_key);
     hdr->len_hmac_sha1_key = htonl(hdr->len_hmac_sha1_key);
@@ -145,7 +144,7 @@ static int apple_des3_ede_unwrap_key1(unsigned char *wrapped_key, int wrapped_ke
     }
     if(!EVP_DecryptFinal_ex(&ctx, TEMP1 + outlen, &tmplen)) 
     {
-	if (header.len_wrapped_aes_key==48) return(-1);
+	/*if (header.len_wrapped_aes_key==48)*/ return(-1);
     }
     outlen += tmplen;
     EVP_CIPHER_CTX_cleanup(&ctx);
@@ -211,7 +210,6 @@ hash_stat hash_plugin_parse_hash(char *hashline, char *filename)
     }
     if (strncmp(buf8,"encrcdsa",8)==0)
     {
-	if (!hashline) elog("File %s is not a DMG file!\n", filename);
 	//return hash_err;
 	headerver=2;
     }
@@ -280,6 +278,7 @@ hash_stat hash_plugin_parse_hash(char *hashline, char *filename)
 
     close(fd);
 
+
     (void)hash_add_username(filename);
     (void)hash_add_hash("DMG file        ",0);
     (void)hash_add_salt("123");
@@ -302,10 +301,10 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
     {
 	for (a=0;a<vectorsize;a++)
 	{
-	    hash_pbkdf2_len(password[a], strlen(password[a]), (unsigned char *)header.kdf_salt, 20, 1000, sizeof(derived_key), derived_key);
+	    hash_pbkdf2_len(password[a], strlen(password[a]), (unsigned char *)header.kdf_salt, 20, header.kdf_iteration_count, sizeof(derived_key), derived_key);
 	    if (
-	     (apple_des3_ede_unwrap_key1(header.wrapped_aes_key, 40, derived_key)==0) &&
-             (apple_des3_ede_unwrap_key1(header.wrapped_hmac_sha1_key, 48, derived_key)==0)
+	     (apple_des3_ede_unwrap_key1(header.wrapped_aes_key, header.len_wrapped_aes_key, derived_key)==0) &&
+             (apple_des3_ede_unwrap_key1(header.wrapped_hmac_sha1_key, header.len_hmac_sha1_key, derived_key)==0)
             ) 
     	    {
     		memcpy(salt2[a],"DMG file        \0\0\0\0\0\0\0\0\0",20);
@@ -327,7 +326,7 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
 	    unsigned char outbuf2[4096];
 	    unsigned char iv[20];
 
-	    hash_pbkdf2_len(password[a], strlen(password[a]), (unsigned char *)header2.kdf_salt, 20, 1000, sizeof(derived_key), derived_key);
+	    hash_pbkdf2_len(password[a], strlen(password[a]), (unsigned char *)header2.kdf_salt, 20, header2.kdf_iteration_count, sizeof(derived_key), derived_key);
 
 	    EVP_CIPHER_CTX_init(&ctx);
 	    TEMP1 = alloca(header2.encrypted_keyblob_size);
@@ -351,13 +350,15 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
         	hash_aes_set_decrypt_key(aes_key_, 128, &aes_decrypt_key);
         	hash_aes_cbc_encrypt(chunk2, outbuf2, 4096, &aes_decrypt_key, iv, AES_DECRYPT);
         	// Valid koly block
-        	if ((memmem(outbuf2,4096,"koly\x00\x00\x00\x04\x00\x00\x02\x00",12))||(memmem(outbuf2,4096,"koly\x00\x00\x00\x05\x00\x00\x02\x00",12)))
+        	if ((hash_memmem(outbuf2,4096,"koly\x00\x00\x00\x04\x00\x00\x02\x00",12))||(hash_memmem(outbuf2,4096,"koly\x00\x00\x00\x05\x00\x00\x02\x00",12)))
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
         	// Valid EFI header
         	if (memcmp(outbuf2+(4096-(512-chunkoffset)),"EFI PART",8)==0)
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
         	// Valid HFS volume header
@@ -365,6 +366,7 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
             	    && ((memcmp(outbuf2+(4096-(1024-chunkoffset)+2),"\x00\x04",2)==0)||(memcmp(outbuf2+(4096-(1024-chunkoffset)+2),"\x00\x05",2)==0))
             	    && ((memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"8.10",4)==0) ||(memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"10.0",4)==0)||(memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"HFSJ",4)==0)))
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
     	    }
@@ -380,13 +382,15 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
         	hash_aes_cbc_encrypt(chunk2, outbuf2, 4096, &aes_decrypt_key, iv, AES_DECRYPT);
 
         	// Valid koly block
-        	if ((memmem(outbuf2,4096,"koly\x00\x00\x00\x04\x00\x00\x02\x00",12))||(memmem(outbuf2,4096,"koly\x00\x00\x00\x05\x00\x00\x02\x00",12)))
+        	if ((hash_memmem(outbuf2,4096,"koly\x00\x00\x00\x04\x00\x00\x02\x00",12))||(hash_memmem(outbuf2,4096,"koly\x00\x00\x00\x05\x00\x00\x02\x00",12)))
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
         	// Valid EFI header
         	if (memcmp(outbuf2+(4096-(512-chunkoffset)),"EFI PART",8)==0)
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
         	// Valid HFS volume header
@@ -394,6 +398,7 @@ hash_stat hash_plugin_check_hash(const char *hash, const char *password[VECTORSI
             	    && ((memcmp(outbuf2+(4096-(1024-chunkoffset)+2),"\x00\x04",2)==0)||(memcmp(outbuf2+(4096-(1024-chunkoffset)+2),"\x00\x05",2)==0))
             	    && ((memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"8.10",4)==0) ||(memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"10.0",4)==0)||(memcmp(outbuf2+(4096-(1024-chunkoffset)+8),"HFSJ",4)==0)))
         	{
+            	    *num=a;
             	    return hash_ok;
         	}
     	    }

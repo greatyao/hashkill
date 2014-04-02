@@ -59,7 +59,6 @@ cl_int _clGetPlatformInfoNoErr(cl_platform_id platform,cl_platform_info param_na
 cl_int _clGetPlatformIDsNoErr(cl_uint num_entries,cl_platform_id *platforms,cl_uint *num_platforms);
 cl_int _clReleaseProgram(cl_program program);
 cl_int _clUnloadCompiler(void);
-cl_int _clWaitForEvents(cl_uint num, const cl_event* ev);
 
 hash_stat initialize_opencl(void);
 

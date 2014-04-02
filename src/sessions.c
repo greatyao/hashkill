@@ -42,7 +42,7 @@
 #include "loadfiles.h"
 #include "hashgen.h"
 #include "sessions.h"
-#define HAVE_JSON_JSON_H
+
 #ifdef HAVE_JSON_JSON_H
 #include <json/json.h>
 #endif
@@ -216,6 +216,7 @@ void session_close_file_ocl(FILE *sessionfile)
 
     sf = sessionfile;
     jsonbuf = malloc(strlen(json_object_to_json_string(root_node))+1);
+    memset(jsonbuf,0,strlen(json_object_to_json_string(root_node))+1);
     strcpy(jsonbuf,json_object_to_json_string(root_node));
     fputs(jsonbuf,sf);
     free(jsonbuf);
@@ -454,8 +455,8 @@ hash_stat session_write_markov_parm(char *statfile, int threshold, int len, uint
     jobj = json_object_new_string(ltemp);
     json_object_object_add(attack_header_node,"currentcount", jobj);
     json_object_object_add(root_node,"markov", attack_header_node);
-    return hash_ok;
 #endif
+    return hash_ok;
 }
 
 
@@ -485,9 +486,8 @@ hash_stat session_write_rule_parm(char *rulename, uint64_t current, uint64_t ove
     json_object_object_add(attack_header_node,"currentcount", jobj);
 
     json_object_object_add(root_node,"rule", attack_header_node);
-    return hash_ok;
 #endif
-
+    return hash_ok;
 }
 
 
@@ -680,7 +680,7 @@ hash_stat session_write_parameters(char *plugin, attack_method_t attacktype, uin
 #ifdef HAVE_JSON_JSON_H
     time_t myclock;
     json_object *jobj;
-    char buf[4096];
+    char buf[4096*2];
     int cnt;
     char *space=" ";
     struct tm *lotime;
@@ -688,7 +688,7 @@ hash_stat session_write_parameters(char *plugin, attack_method_t attacktype, uin
     if (get_cracked_num()==get_hashes_num()) return(hash_ok);
     main_header_node = json_object_new_object();
     cnt=0;
-    bzero(buf,4096);
+    memset(buf,0,4096);
     while ((session_argv[cnt])&&(cnt<MAXARGV-1)) 
     {
 	strcat(buf,session_argv[cnt]);
@@ -700,6 +700,10 @@ hash_stat session_write_parameters(char *plugin, attack_method_t attacktype, uin
     json_object_object_add(main_header_node,"commandline", jobj);
     jobj = json_object_new_string(plugin);
     json_object_object_add(main_header_node,"plugin", jobj);
+    jobj = json_object_new_string(additional_options);
+    json_object_object_add(main_header_node,"addopts", jobj);
+    jobj = json_object_new_string(padditional_options);
+    json_object_object_add(main_header_node,"paddopts", jobj);
     jobj = json_object_new_int((int)progress);
     json_object_object_add(main_header_node,"progress", jobj);
     jobj = json_object_new_int(attack_method);
@@ -709,7 +713,7 @@ hash_stat session_write_parameters(char *plugin, attack_method_t attacktype, uin
     jobj = json_object_new_int(hash_crack_speed);
     json_object_object_add(main_header_node,"attackspeed", jobj);
     myclock=time(NULL);
-    if (myclock != ((time_t) -1)) return hash_err;
+    if (myclock == ((time_t) -1)) return hash_err;
     lotime = localtime(&myclock);
     if (!lotime) return hash_err;
     jobj = json_object_new_string(asctime(lotime));
@@ -996,6 +1000,15 @@ hash_stat session_restore(char *sessionname)
     set_current_plugin(json_object_get_string(json_object_object_get(main_header_node,"plugin")));
     if (load_plugin() == hash_err) exit(EXIT_FAILURE);
     attack_method  = json_object_get_int(json_object_object_get(main_header_node,"attacktype"));
+
+    free(padditional_options);
+    padditional_options = malloc(strlen(json_object_get_string(json_object_object_get(main_header_node,"paddopts")))+1);
+    strcpy(padditional_options,json_object_get_string(json_object_object_get(main_header_node,"paddopts")));
+    process_addopts((char*)json_object_get_string(json_object_object_get(main_header_node,"paddopts")));
+
+    free(additional_options);
+    padditional_options = malloc(strlen(json_object_get_string(json_object_object_get(main_header_node,"addopts")))+1);
+    strcpy(padditional_options,json_object_get_string(json_object_object_get(main_header_node,"addopts")));
 
     out_cracked_file=malloc(strlen(json_object_get_string(json_object_object_get(main_header_node,"outcrackedfile")))+1);
     out_uncracked_file=malloc(strlen(json_object_get_string(json_object_object_get(main_header_node,"outuncrackedfile")))+1);

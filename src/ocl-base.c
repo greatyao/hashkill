@@ -1,4 +1,4 @@
-﻿/* 
+/* 
  * ocl-base.c
  *
  * hashkill - a hash cracking tool
@@ -18,18 +18,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
- 
+
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 #include "err.h"
-#include "hashinterface.h"
-#ifdef __CYGWIN__
-#include <CL/cl.h>
-#else
 #include "ocl-base.h"
-#include <w32api/windows.h>
-#endif
+#include "hashinterface.h"
 
 void *dll;
 
@@ -61,7 +56,7 @@ typedef cl_int (*CLRELEASEKERNEL)(cl_kernel kernel);
 typedef cl_int (*CLFLUSH)(cl_command_queue queue);
 typedef cl_int (*CLFINISH)(cl_command_queue queue);
 typedef cl_int (*CLGETPLATFORMINFO)(cl_platform_id platform,cl_platform_info param_name, size_t param_value_size, void *param_value,size_t *param_value_size_ret);
-typedef cl_int (*CLWAITFOREVENTS)(cl_uint num, const cl_event* ev);
+
 
 
 /* OpenCL functions used */
@@ -96,11 +91,11 @@ cl_int _clUnloadCompiler(void);
 cl_int _clGetPlatformInfo(cl_platform_id platform,cl_platform_info param_name, size_t param_value_size, void *param_value,size_t *param_value_size_ret);
 cl_int _clGetPlatformInfoNoErr(cl_platform_id platform,cl_platform_info param_name, size_t param_value_size, void *param_value,size_t *param_value_size_ret);
 cl_int _clGetPlatformIDsNoErr(cl_uint num_entries,cl_platform_id *platforms,cl_uint *num_platforms);
-cl_int _clWaitForEvents(cl_uint num, const cl_event* ev);static void checkErr(char *func, cl_int err);
+static void checkErr(char *func, cl_int err);
 hash_stat initialize_ocl(void);
 
 
-#ifndef __CYGWIN__
+
 CLENQUEUEREADBUFFER clEnqueueReadBuffer = NULL;
 CLSETKERNELARG clSetKernelArg = NULL;
 CLENQUEUENDRANGEKERNEL clEnqueueNDRangeKernel = NULL;
@@ -127,19 +122,19 @@ CLFINISH clFinish = NULL;
 CLRELEASEPROGRAM clReleaseProgram = NULL;
 CLGETPLATFORMINFO clGetPlatformInfo = NULL;
 CLUNLOADCOMPILER clUnloadCompiler = NULL;
-CLWAITFOREVENTS clWaitForEvents = NULL;
-#endif
 
-#ifndef __CYGWIN__
+
+
 static void * GetProcAddress( void * pLibrary, const char * name)
 {
     return dlsym( pLibrary, name);
 }
 
+
 hash_stat initialize_opencl(void)
 {
-    dll = dlopen( "OpenCL.dll", RTLD_LAZY/*|RTLD_GLOBAL*/);
- if (!dll)
+    dll = dlopen( "libOpenCL.so", RTLD_LAZY/*|RTLD_GLOBAL*/);
+    if (!dll)
     {
 	dll = dlopen( "libOpenCL.so.1", RTLD_LAZY/*|RTLD_GLOBAL*/);
 	if (!dll)
@@ -302,19 +297,9 @@ hash_stat initialize_opencl(void)
     {
 	return hash_err;
     }
-	clWaitForEvents = (CLWAITFOREVENTS)GetProcAddress(dll, "clWaitForEvents");
-	if (!clWaitForEvents)
-    {
-	return hash_err;
-    }
     return hash_ok;
 }
-#else
-hash_stat initialize_opencl(void)
-{
-	return hash_ok;
-}
-#endif
+
 
 
 static void checkErr(char *func, cl_int err)
@@ -350,6 +335,7 @@ static void checkErr(char *func, cl_int err)
     	    case CL_INVALID_BUFFER_SIZE:	elog("%s: CL_INVALID_BUFFER_SIZE",func); break;
     	    case CL_INVALID_GLOBAL_WORK_SIZE:   elog("%s: CL_INVALID_GLOBAL_WORK_SIZE",func); break;
     	    case CL_INVALID_COMPILER_OPTIONS:   elog("%s: CL_INVALID_COMPILER_OPTIONS",func); break;
+    	    case CL_PLATFORM_NOT_FOUND_KHR:   	elog("%s: PLATFORM_NOT_FOUND_KHR",func); break;
     	    default:                            elog("%s: Unknown error code: %d", func,err); break;
         }
         printf("\n\n");
@@ -655,13 +641,5 @@ cl_int _clGetPlatformInfoNoErr(cl_platform_id platform,cl_platform_info param_na
     cl_int err;
 
     err = clGetPlatformInfo(platform,param_name,param_value_size,param_value,param_value_size_ret);
-    return err;
-}
-
-cl_int _clWaitForEvents(cl_uint num, const cl_event* ev)
-{
-    cl_int err;
-
-    err = clWaitForEvents(num, ev);
     return err;
 }

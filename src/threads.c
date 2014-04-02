@@ -2007,10 +2007,10 @@ hash_stat main_thread_bruteforce(int threads)
     mylist = hash_list;
     spawn_threads(threads);
     if (session_restore_flag==0) attack_overall_count=1;
-    if (bruteforce_start==bruteforce_end) attack_overall_count = (pow(strlen(bruteforce_charset),bruteforce_end));
+    if (bruteforce_start==bruteforce_end) attack_overall_count = (powl(strlen(bruteforce_charset),bruteforce_end));
     else for (cnt = bruteforce_start; cnt <= bruteforce_end; cnt++)
     {
-        attack_overall_count += (pow(strlen(bruteforce_charset),cnt));
+        attack_overall_count += (powl(strlen(bruteforce_charset),cnt));
     }
 
 

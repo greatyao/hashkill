@@ -46,6 +46,7 @@ void register_sha1_hex(void * (*sha1_hex)(const char *hash[VECTORSIZE], char *ha
 void register_sha256_unicode(void * (*sha256_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]));
 void register_sha256_hex(void * (*sha256_hex)(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]));
 void register_sha512_unicode(void * (*sha512_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]));
+void register_sha384_unicode(void * (*sha384_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]));
 void register_sha512_hex(void * (*sha512_hex)(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]));
 void register_fcrypt(hash_stat (*hfcrypt)(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]));
 void register_fcrypt_slow(hash_stat (*hfcrypt_slow)(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]));
@@ -57,7 +58,9 @@ void register_pbkdf2_256_len(void * (*pbkdf2_256_len)(const char *pass, int pass
 void register_hmac_sha1_file(void * (*hmac_sha1_file)(void *key, int keylen, char *filename, long offset, long size, unsigned char *output, int outputlen));
 void register_hmac_sha1(void * (*hmac_sha1)(void *key, int keylen, unsigned char *data, int datalen, unsigned char *output, int outputlen));
 void register_hmac_md5(void * (*hmac_md5)(void *key, int keylen, unsigned char *data, int datalen, unsigned char *output, int outputlen));
-void register_pbkdf512(void * (*pbkdf512)(const char *pass, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out));
+void register_pbkdf512(void * (*pbkdf512)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out));
+void register_pbkdfrmd160(void * (*pbkdfrmd160)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out));
+void register_pbkdfwhirlpool(void * (*pbkdfwhirlpool)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out));
 void register_aes_encrypt(void * (*aes_encrypt)(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode));
 void register_aes_decrypt(void * (*aes_decrypt)(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode));
 void register_des_ecb_encrypt(void * (*des_ecb_encrypt)(const unsigned char *key, int keysize, const unsigned char *in[VECTORSIZE], int len, unsigned char *out[VECTORSIZE], int mode));
@@ -69,6 +72,9 @@ void register_lm_slow(void * (*lm_slow)(const unsigned char *in[VECTORSIZE], uns
 void register_aes_cbc_encrypt(void * (*aes_cbc_encrypt)(const unsigned char *in,unsigned char *out,unsigned long length,AES_KEY *key,unsigned char ivec[16],int oper));
 void register_aes_set_encrypt_key(int * (*aes_set_encrypt_key)(const unsigned char *userKey,const int bits,AES_KEY *key));
 void register_aes_set_decrypt_key(int * (*aes_set_decrypt_key)(const unsigned char *userKey,const int bits,AES_KEY *key));
+void register_decrypt_aes_xts(void * (*decrypt_aes_ctx)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block));
+void register_decrypt_twofish_xts(void * (*decrypt_twofish_ctx)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block));
+void register_decrypt_serpent_xts(void * (*decrypt_serpent_ctx)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block));
 
 
 char* strupr(char* ioString);
@@ -98,6 +104,11 @@ void register_add_salt2(void *(*add_salt2)(const char *salt2))
 void register_ripemd160(void * (*ripemd160)(const char *plaintext[VECTORSIZE], char *hashripe[VECTORSIZE], int len[VECTORSIZE]))
 {
     hash_ripemd160 = ripemd160;
+}
+
+void register_whirlpool(void * (*whirlpool)(const char *plaintext[VECTORSIZE], char *hashripe[VECTORSIZE], int len[VECTORSIZE]))
+{
+    hash_whirlpool = whirlpool;
 }
 
 
@@ -185,6 +196,11 @@ void register_sha512_unicode(void * (*sha512_unicode)(const char *plaintext[VECT
     hash_sha512_unicode = sha512_unicode;
 }
 
+void register_sha384_unicode(void * (*sha384_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]))
+{
+    hash_sha384_unicode = sha384_unicode;
+}
+
 void register_sha512_hex(void * (*sha512_hex)(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]))
 {
     hash_sha512_hex = sha512_hex;
@@ -241,9 +257,19 @@ void register_hmac_md5(void * (*hmac_md5)(void *key, int keylen, unsigned char *
 }
 
 
-void register_pbkdf512(void * (*pbkdf512)(const char *pass, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out))
+void register_pbkdf512(void * (*pbkdf512)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out))
 {
     hash_pbkdf512 = pbkdf512;
+}
+
+void register_pbkdfrmd160(void * (*pbkdfrmd160)(const char *pass,int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out))
+{
+    hash_pbkdfrmd160 = pbkdfrmd160;
+}
+
+void register_pbkdfwhirlpool(void * (*pbkdfwhirlpool)(const char *pass,int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out))
+{
+    hash_pbkdfwhirlpool = pbkdfwhirlpool;
 }
 
 
@@ -279,6 +305,22 @@ void register_rc4_encrypt(void * (*rc4_encrypt)(const unsigned char *key, int ke
 {
     hash_rc4_encrypt = rc4_encrypt;
 }
+
+void register_decrypt_aes_xts(void * (*decrypt_aes_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block))
+{
+    hash_decrypt_aes_xts = decrypt_aes_xts;
+}
+
+void register_decrypt_twofish_xts(void * (*decrypt_twofish_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block))
+{
+    hash_decrypt_twofish_xts = decrypt_twofish_xts;
+}
+
+void register_decrypt_serpent_xts(void * (*decrypt_serpent_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block))
+{
+    hash_decrypt_serpent_xts = decrypt_serpent_xts;
+}
+
 
 
 void register_lm(void * (*lm)(const unsigned char *in[VECTORSIZE], unsigned char *out[VECTORSIZE]))
@@ -372,3 +414,53 @@ void _to64(char *s, unsigned long v, int n)
 
 
 
+unsigned char* hash_memmem(unsigned char* haystack, int hlen, char* needle, int nlen) 
+{
+    if (nlen > hlen) return 0;
+    int i,j=0;
+    switch(nlen) {
+    case 0:
+            return haystack;
+    case 1:
+        return memchr(haystack, needle[0], hlen);
+    case 2:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+                if (*(uint16_t*)(haystack+i)==*(uint16_t*)needle) 
+                {
+                    return haystack+i;
+                }
+        }
+        break;
+    case 4:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+            if (*(uint32_t*)(haystack+i)==*(uint32_t*)needle) 
+            {
+                return haystack+i;
+            }
+        }
+        break;
+    default:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+            if (haystack[i]==needle[j]) 
+            {
+                if (j==nlen-1) 
+                {
+                    return haystack+i-j;
+                } 
+                else 
+                {
+                    j++;
+                }
+            } 
+            else 
+            {
+                i-=j;
+                j=0;
+            }
+        }
+    }
+    return NULL;
+}

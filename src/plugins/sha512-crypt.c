@@ -292,7 +292,7 @@ __sha512_crypt_r (key, salt, buffer, buflen, vectorsize)
      parts. */
   for (i=0;i<vectorsize;i++)
   {
-    cp[i] = strncpy (buffer[i], sha512_salt_prefix, MAX (0, buflen[i]));
+    cp[i] = __stpncpy (buffer[i], sha512_salt_prefix, MAX (0, buflen[i]));
     buflen[i] -= sizeof (sha512_salt_prefix) - 1;
 
     if (rounds_custom)
@@ -303,7 +303,7 @@ __sha512_crypt_r (key, salt, buffer, buflen, vectorsize)
       buflen[i] -= n;
     }
 
-    cp[i] = strncpy (cp[i], salt, MIN ((size_t) MAX (0, buflen[i]), salt_len));
+    cp[i] = __stpncpy (cp[i], salt, MIN ((size_t) MAX (0, buflen[i]), salt_len));
     buflen[i] -= MIN ((size_t) MAX (0, buflen[i]), salt_len);
 
     if (buflen[i] > 0)
@@ -350,7 +350,7 @@ __sha512_crypt_r (key, salt, buffer, buflen, vectorsize)
 
     if (buflen <= 0)
     {
-      //__set_errno (ERANGE);
+      __set_errno (ERANGE);
       buffer[i][0] = 0;
     }
     else

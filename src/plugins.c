@@ -38,7 +38,7 @@
 
 
 /* Global variables */
-static char currentplugin[128];	// current plugin in use
+static char currentplugin[HASHFILE_MAX_LINE_LENGTH];	// current plugin in use
 /* detecting is just a flag which controls whether load_plugin() reused by detect_plugin() will print out smth */
 static int detecting=0;
 /* dlhandle used */
@@ -48,7 +48,7 @@ static void *dlhandle;
 /* Function prototypes */
 hash_stat print_plugins_summary(char *plugindir);
 void print_plugin_detailed(char *plugin);
-const char *get_current_plugin(void);
+char *get_current_plugin(void);
 void set_current_plugin(const char *plugin);
 hash_stat load_plugin(void);
 hash_stat detect_plugin(char *plugindir,char *file, char *hash);
@@ -128,9 +128,9 @@ void print_plugin_detailed(char *plugin)
 
 
 /* Get current plugin */
-const char *get_current_plugin(void)
+char *get_current_plugin(void)
 {
-    return currentplugin;
+    return (char *)&currentplugin;
 }
 
 
@@ -192,6 +192,7 @@ hash_stat load_plugin(void)
 	void(*register_sha256_unicode)(void (*sha256_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])) = dlsym(dlhandle, "register_sha256_unicode");
 	void(*register_sha256_hex)(void (*sha256_hex)(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE])) = dlsym(dlhandle, "register_sha256_hex");
 	void(*register_sha512_unicode)(void (*sha512_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])) = dlsym(dlhandle, "register_sha512_unicode");
+	void(*register_sha384_unicode)(void (*sha384_unicode)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])) = dlsym(dlhandle, "register_sha384_unicode");
 	void(*register_sha512_hex)(void (*sha512_hex)(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE])) = dlsym(dlhandle, "register_sha512_hex");
 	void(*register_fcrypt)(hash_stat (*fcrypt)(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE])) = dlsym(dlhandle, "register_fcrypt");
 	void(*register_fcrypt_slow)(hash_stat (*fcrypt_slow)(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE])) = dlsym(dlhandle, "register_fcrypt_slow");
@@ -204,7 +205,10 @@ hash_stat load_plugin(void)
 	void(*register_hmac_sha1)(void (*hmac_sha1)(void *key, int keylen, unsigned char *data, int datalen,unsigned char *output, int outputlen)) = dlsym(dlhandle, "register_hmac_sha1");
 	void(*register_hmac_md5)(void (*hmac_md5)(void *key, int keylen, unsigned char *data, int datalen, unsigned char *output, int outputlen)) = dlsym(dlhandle, "register_hmac_md5");
 	void(*register_ripemd160)(void (*ripemd160)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])) = dlsym(dlhandle, "register_ripemd160");
-	void(*register_pbkdf512)(void (*pbkdf512)(const char *pass, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)) = dlsym(dlhandle, "register_pbkdf512");
+	void(*register_whirlpool)(void (*whirlpool)(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])) = dlsym(dlhandle, "register_whirlpool");
+	void(*register_pbkdf512)(void (*pbkdf512)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)) = dlsym(dlhandle, "register_pbkdf512");
+	void(*register_pbkdfrmd160)(void (*pbkdfrmd160)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)) = dlsym(dlhandle, "register_pbkdfrmd160");
+	void(*register_pbkdfwhirlpool)(void (*pbkdfwhirlpool)(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)) = dlsym(dlhandle, "register_pbkdfwhirlpool");
 	void(*register_aes_encrypt)(void (*aes_encrypt)(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode)) = dlsym(dlhandle, "register_aes_encrypt");
 	void(*register_aes_decrypt)(void (*aes_decrypt)(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode)) = dlsym(dlhandle, "register_aes_decrypt");
 	void(*register_des_ecb_encrypt)(void (*des_ecb_encrypt)(const unsigned char *key, int keysize, const unsigned char *in[VECTORSIZE], int len, unsigned char *out[VECTORSIZE], int mode)) = dlsym(dlhandle, "register_des_ecb_encrypt");
@@ -216,6 +220,9 @@ hash_stat load_plugin(void)
 	void(*register_aes_cbc_encrypt)(void (*aes_cbc_encrypt)(const unsigned char *in,unsigned char *out,unsigned long length,AES_KEY *key,unsigned char ivec[16],int oper)) = dlsym(dlhandle, "register_aes_cbc_encrypt");
 	void(*register_aes_set_encrypt_key)(int (*aes_set_encrypt_key)(const unsigned char *userKey,const int bits,AES_KEY *key)) = dlsym(dlhandle, "register_aes_set_encrypt_key");
 	void(*register_aes_set_decrypt_key)(int (*aes_set_decrypt_key)(const unsigned char *userKey,const int bits,AES_KEY *key)) = dlsym(dlhandle, "register_aes_set_decrypt_key");
+	void(*register_decrypt_aes_xts)(void (*decrypt_aes_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)) = dlsym(dlhandle, "register_decrypt_aes_xts");
+	void(*register_decrypt_twofish_xts)(void (*decrypt_twofish_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)) = dlsym(dlhandle, "register_decrypt_twofish_xts");
+	void(*register_decrypt_serpent_xts)(void (*decrypt_serpent_xts)(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)) = dlsym(dlhandle, "register_decrypt_serpent_xts");
 
 
 
@@ -241,6 +248,7 @@ hash_stat load_plugin(void)
 	    register_sha256_unicode(hash_proto_sha256_unicode);
 	    register_sha256_hex(hash_proto_sha256_hex);
 	    register_sha512_unicode(hash_proto_sha512_unicode);
+	    register_sha384_unicode(hash_proto_sha384_unicode);
 	    register_sha512_hex(hash_proto_sha512_hex);
 	    register_fcrypt(hash_proto_fcrypt);
 	    register_fcrypt_slow(hash_proto_fcrypt_slow);
@@ -253,7 +261,10 @@ hash_stat load_plugin(void)
 	    register_hmac_sha1(hash_proto_hmac_sha1);
 	    register_hmac_md5(hash_proto_hmac_md5);
 	    register_ripemd160(hash_proto_ripemd160);
+	    register_whirlpool(hash_proto_whirlpool);
 	    register_pbkdf512(hash_proto_pbkdf512);
+	    register_pbkdfrmd160(hash_proto_pbkdfrmd160);
+	    register_pbkdfwhirlpool(hash_proto_pbkdfwhirlpool);
 	    register_aes_encrypt(hash_proto_aes_encrypt);
 	    register_aes_decrypt(hash_proto_aes_decrypt);
 	    register_des_ecb_encrypt(hash_proto_des_ecb_encrypt);
@@ -265,7 +276,10 @@ hash_stat load_plugin(void)
 	    register_aes_cbc_encrypt(hash_proto_aes_cbc_encrypt);
 	    register_aes_set_encrypt_key(hash_proto_aes_set_encrypt_key);
 	    register_aes_set_decrypt_key(hash_proto_aes_set_decrypt_key);
-	    
+	    register_decrypt_aes_xts(hash_proto_decrypt_aes_xts);
+	    register_decrypt_twofish_xts(hash_proto_decrypt_twofish_xts);
+	    register_decrypt_serpent_xts(hash_proto_decrypt_serpent_xts);
+
 	    /* set vector size hackery */
 	    if ( (strcmp(get_current_plugin(),"desunix")==0) || (strcmp(get_current_plugin(),"lm")==0) || (strcmp(get_current_plugin(),"oracle-old")==0)) 
 	    {
@@ -334,7 +348,7 @@ hash_stat detect_plugin(char *plugindir,char *file, char *hash)
     char *detected_list;
     int detected_list_size=0;
     int j,flag;
-    char lhash[256]; // Local hashline copy cause some plugins play rough with strtok
+    char lhash[HASHFILE_MAX_LINE_LENGTH]; // Local hashline copy cause some plugins play rough with strtok
 
     /* We are now detecting plugins, don't be verbose */
     detecting=1;
@@ -358,7 +372,7 @@ hash_stat detect_plugin(char *plugindir,char *file, char *hash)
 	/* First check preferred plugins */
 	while (preferred_plugins[i])
 	{
-	    strcpy(soname,preferred_plugins[i]);
+	    strncpy(soname,preferred_plugins[i],1024);
 	    set_current_plugin(soname);
 	    if (load_plugin() == hash_ok) 
 	    if (!hash_plugin_is_special())

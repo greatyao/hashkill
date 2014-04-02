@@ -10,11 +10,9 @@
 #include "hashinterface.h"
 #include "ocl-adl.h"
 #include "ocl-threads.h"
-#ifdef __CYGWIN__
-#include <stdarg.h>
-#include <w32api/windef.h>
-#include <w32api/winbase.h>
-#endif
+
+
+
 #define ADL_MAX_PATH 256
 #define ADL_OK 0
 
@@ -45,13 +43,14 @@ typedef struct AdapterInfo
     char strAdapterName[ADL_MAX_PATH];
     char strDisplayName[ADL_MAX_PATH];
     int iPresent;
-#if defined (_WIN32) || defined (_WIN64) || defined(__CYGWIN__)
+#if defined (_WIN32) || defined (_WIN64)
     int iExist;
     char strDriverPath[ADL_MAX_PATH];
     char strDriverPathExt[ADL_MAX_PATH];
     char strPNPString[ADL_MAX_PATH];
     int iOSDisplayIndex;
-#else
+#endif
+#if defined (LINUX)
     int iXScreenNum;
     int iDrvIndex;
     char strXScreenConfigName[ADL_MAX_PATH];
@@ -94,12 +93,12 @@ NVMLDEVICEGETTEMPERATURE nvmlDeviceGetTemperature = NULL;
 NVMLDEVICEGETNAME nvmlDeviceGetName = NULL;
 
 
-#ifndef __CYGWIN__
+
 static void * GetProcAddress( void * pLibrary, const char * name)
 {
     return dlsym( pLibrary, name);
 }
-#endif
+
 
 /* Initialize ADL/NVLM */
 int setup_adl(void)
@@ -122,41 +121,27 @@ int setup_adl(void)
 	return 3;
     }
     // Probe ADL
-#ifdef __CYGWIN__
-    dll = LoadLibraryA("atiadlxx.dll");
-	if (!dll)
-    {
-	wlog("Canot load %s %d\n","atiadlxx.dll", GetLastError());
-	goto nvidia;
-    }
-#else
     dll = dlopen( "libatiadlxx.so", RTLD_LAZY|RTLD_GLOBAL);
-	if (!dll)
+    if (!dll)
     {
-	wlog("Canot load %s\n","libatiadlxx.so");
 	goto nvidia;
     }
-#endif
     
     ADL_Overdrive5_CurrentActivity_Get = (ADL_OVERDRIVE5_CURRENTACTIVITY_GET) GetProcAddress(dll,"ADL_Overdrive5_CurrentActivity_Get");
     if (!ADL_Overdrive5_CurrentActivity_Get)
     {
-	wlog("Canot GetProcAddress %s\n","ADL_Overdrive5_CurrentActivity_Get");
 	goto nvidia;
     }
     ADL_Adapter_AdapterInfo_Get = (ADL_ADAPTER_ADAPTERINFO_GET) GetProcAddress(dll,"ADL_Adapter_AdapterInfo_Get");
     if (!ADL_Adapter_AdapterInfo_Get)
     {
-	wlog("Canot GetProcAddress %s\n","ADL_Adapter_AdapterInfo_Get");
 	goto nvidia;
     }
     ADL_Overdrive5_Temperature_Get = (ADL_OVERDRIVE5_TEMPERATURE_GET) GetProcAddress(dll,"ADL_Overdrive5_Temperature_Get");
     if (!ADL_Overdrive5_Temperature_Get)
     {
-	wlog("Canot GetProcAddress %s\n","ADL_Overdrive5_Temperature_Get");
 	goto nvidia;
     }
-	hlog("ADL_Overdrive5_Temperature_Get %p\n", ADL_Overdrive5_Temperature_Get);
 
     ADL_Adapter_AdapterInfo_Get(adapterinfo, sizeof(adapterinfo)*64);
     curdev=-1;
@@ -164,8 +149,7 @@ int setup_adl(void)
     strcpy(dispname,"NONE");
     for (cnt=0;cnt<64;cnt++)
     {
-	//hlog("adapterinfo[cnt].strUDID %s\n", adapterinfo[cnt].strUDID);
-	//if (adapterinfo[cnt].strUDID)
+	if (adapterinfo[cnt].strUDID)
 	if ((ADL_OK==ADL_Overdrive5_CurrentActivity_Get(cnt,&activity))&&(curdev!=(adapterinfo[cnt].iDeviceNumber+adapterinfo[cnt].iBusNumber*100)))
 	{
 	    curdev=adapterinfo[cnt].iDeviceNumber+adapterinfo[cnt].iBusNumber*100;
@@ -266,29 +250,25 @@ void adl_getstats(void)
     //ADL_Overdrive5_CurrentActivity_Get = (ADL_OVERDRIVE5_CURRENTACTIVITY_GET) GetProcAddress(dll,"ADL_Overdrive5_CurrentActivity_Get");
     if (!ADL_Overdrive5_CurrentActivity_Get)
     {
-	hlog("@1%s\n", "");
 	goto nvidia;
     }
     //ADL_Adapter_AdapterInfo_Get = (ADL_ADAPTER_ADAPTERINFO_GET) GetProcAddress(dll,"ADL_Adapter_AdapterInfo_Get");
     if (!ADL_Adapter_AdapterInfo_Get)
     {
-	hlog("@2%s\n", "");
 	goto nvidia;
     }
     //ADL_Overdrive5_Temperature_Get = (ADL_OVERDRIVE5_TEMPERATURE_GET) GetProcAddress(dll,"ADL_Overdrive5_Temperature_Get");
     if (!ADL_Overdrive5_Temperature_Get)
     {
-	hlog("@3%s\n", "");
 	goto nvidia;
     }
 
     pthread_mutex_lock(&adlmutex);
-    if (ADL_OK!=ADL_Adapter_AdapterInfo_Get(adapterinfo, sizeof(adapterinfo)*64)) {hlog("@4%s\n", "");goto nvidia;}
+    if (ADL_OK!=ADL_Adapter_AdapterInfo_Get(adapterinfo, sizeof(adapterinfo)*64)) goto nvidia;
     curdev=-1;
     realdev=0;
     for (cnt=0;cnt<64;cnt++)
     {
-	//hlog("Get %d %d\n", adapterinfo[cnt].iDeviceNumber, adapterinfo[cnt].iBusNumber);
 	if (adapterinfo[cnt].strUDID)
 	if ((ADL_OK==ADL_Overdrive5_CurrentActivity_Get(cnt,&activity))&&(curdev!=(adapterinfo[cnt].iDeviceNumber+adapterinfo[cnt].iBusNumber*100)))
 	{

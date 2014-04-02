@@ -198,8 +198,6 @@ int ctrl_c_pressed;			// User pressed ctrl-c?
 int ocl_gpu_double;			// GPU double mode
 int ocl_gpu_platform;			// GPU double mode
 int ocl_gpu_tempthreshold;		// Temperature threshold
-int ocl_gpu_devices[16];
-int ocl_gpu_device_num;
 char *rule_file;			// Rule file to process
 int hash_len;				// hash length
 char *out_cracked_file;			// output hashes file 

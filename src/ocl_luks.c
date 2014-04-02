@@ -52,9 +52,6 @@ static int hash_ret_len1=32;
 #define LUKS_DIGESTSIZE 20
 #define LUKS_SALTSIZE 32
 #define LUKS_NUMKEYS 8
-#ifndef O_LARGEFILE
-#define O_LARGEFILE 0
-#endif
 
 /* Taken from LUKS on disk format specification */
 struct luks_phdr {

@@ -200,7 +200,7 @@ hash_stat hash_plugin_parse_hash(char *hashline, char *filename)
     int readbytes;
     unsigned int bestiter=0xFFFFFFFF;
 
-    myfile = open(filename, O_RDONLY/*|O_LARGEFILE*/);
+    myfile = open(filename, O_RDONLY|O_LARGEFILE);
     if (myfile<1) 
     {
 	return hash_err;

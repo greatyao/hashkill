@@ -37,12 +37,12 @@
 #include "cpu-feat.h"
 #include "ocl-threads.h"
 #include "ocl-base.h"
+#include "cpu-twofish.h"
+
 
 /* Function prototypes */
 static void usage(const char *progname);
-#ifndef __CYGWIN__
 static char* strupr(char* ioString);
-#endif
 static hash_stat parse_bruteforce_args(char *bruteargs);
 static time_t time1,time2;
 int main(int argc, char *argv[]);
@@ -73,7 +73,6 @@ static void usage(const char *progname)
     printf("-D, --gpu-double \t\t  GPU 2x mode. Better speeds, but less scallable. \n");
     printf("-T, --gpu-temp \t\t\t  GPU temperature threshold (default:90 deg celsius). \n");
     printf("-t, --gpu-platform \t\t  OpenCL platform (default:0). \n");
-    printf("-A, --gpu-device \t\t  OpenCL devices (default:all). \n");
     printf("-i, --interactive-mode \t\t  Interactive mode (reduce flicker and tearing). \n");
     printf("-a, --add-opts \t\t\t  Additional options (for rule-based attacks). \n");
 
@@ -88,7 +87,7 @@ static void usage(const char *progname)
 }
 
 
-#ifndef __CYGWIN__
+
 /* Uppercase a string */
 static char* strupr(char* ioString)
 {
@@ -98,7 +97,7 @@ static char* strupr(char* ioString)
     for(i=0; i<theLength; ++i) {ioString[i] = toupper(ioString[i]);}
     return ioString;
 }
-#endif
+
 
 /* Parse brute-force arguments */
 static hash_stat parse_bruteforce_args(char *bruteargs)
@@ -232,51 +231,6 @@ static hash_stat parse_bruteforce_args(char *bruteargs)
 
 }
 
-#if 0
-/* Process additional options */
-void process_addopts(char *addopt_parm)
-{
-    char *option;
-    int a;
-    char *addopt1,*addopt;
-    int free1=0,free2=0;
-
-    if (strstr(addopt_parm,"::")) 
-    {
-	free2=1;
-	addopt1 = str_replace(addopt_parm,"::",":\x01:");
-    }
-    else addopt1 = addopt_parm;
-    if (strstr(addopt1,": :")) 
-    {
-	free1=1;
-	addopt = str_replace(addopt1,": :",":\x02:");
-    }
-    else addopt = addopt1;
-
-    for (a=0;a<10;a++) addopts[a]=NULL;
-
-    option = strtok(addopt,":");
-    if (!option)
-    {
-	elog("addopts is null?!? That should not happen!\n%s","");
-	exit(1);
-    }
-    addopts[0]=malloc(strlen(option)+1);
-    strcpy(addopts[0],option);
-    a=0;
-    while ( ((option=strtok(NULL,":"))!=NULL)&&(a<9))
-    {
-	a++;
-	addopts[a]=malloc(strlen(option));
-	strcpy(addopts[a],option);
-    }
-    if (free2) free(addopt1);
-    if (free1) free(addopt);
-}
-#endif
-
-
 
 
 /* SIGINT/SIGTERM handler */
@@ -290,13 +244,27 @@ void sigint_handler(int val)
 }
 
 
-void detect_pipe()
+static void detect_pipe()
 {
     if (!isatty(fileno(stdin)))
     {
 	wlog("Please do not pipe to hashkill's stdin, use the 'add pipe' rule instead!\n\n%s","");
-	exit(1);
+	//exit(1);
     }
+}
+
+
+static hash_stat check_out_file(char *filename)
+{
+    FILE *outfile;
+
+    outfile = fopen(filename, "w");
+    if (!outfile)
+    {
+        hlog("Cannot write to output hashes list file: %s\n",filename);
+        return hash_err;
+    }
+    return hash_ok;
 }
 
 
@@ -335,17 +303,15 @@ int main(int argc, char *argv[])
 	{"gpu-double", 0, 0, 'D'},
 	{"gpu-temp", 0, 0, 'T'},
 	{"gpu-platform", 0, 0, 't'},
-	{"gpu-device", 0, 0, 'A'},
 	{"add-opts", 0, 0, 'a'},
+	{"plugin-opts", 0, 0, 'A'},
 	{0, 0, 0, 0}
     };
 
+
     /* initialize */
     printf("\n");
-	char cmd[256] = {0};
-	readlink("/proc/self/exe", cmd, sizeof(cmd));
     hlog("Version %s\n", PACKAGE_VERSION);
-    hlog("Path %s\n", cmd);
     session_restore_flag = 0;
     hash_plugin_parse_hash = NULL;
     hash_plugin_check_hash = NULL;
@@ -364,6 +330,18 @@ int main(int argc, char *argv[])
     markovstat = NULL;
     attack_checkpoints=0;
     attack_avgspeed=0;
+    additional_options=malloc(1);
+    additional_options[0]=0;
+    padditional_options=malloc(1);
+    padditional_options[0]=0;
+
+
+    /* Detect CPU features and setup optimized routines */
+    if (cpu_feat_setup() == hash_err)
+    {
+        elog("No x86 CPU found! %s\n","");
+        exit(1);
+    }
 
     while ((argv[cnt])&&(cnt<MAXARGV))
     {
@@ -383,11 +361,13 @@ int main(int argc, char *argv[])
     interactive_mode=0;
 
     /* Set AMD OpenCL secret envvars */
-//    setenv("GPU_MAX_ALLOC_PERCENT","100",1);
-//    setenv("GPU_USE_SYNC_OBJECTS","1",1);
+    //setenv("GPU_MAX_ALLOC_PERCENT","100",1);
+    //setenv("GPU_USE_SYNC_OBJECTS","1",1);
+    // Bug in AMD Catalyst 13.4
+    setenv("GPU_FLUSH_ON_EXECUTION","1",1);
 
     /* See if someone tried to pipe to stdin */
-    //detect_pipe();
+    detect_pipe();
     disable_term_linebuffer();
 
 #ifndef HAVE_JSON_JSON_H
@@ -404,7 +384,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, sigint_handler);
 
     opterr = 0;
-    while ((option = getopt_long(argc, argv, "p:f:d:P::b::t:A:T:S::s:o:O:N:n:M::m:hicFDG:C:a:T:r:R",long_options, &option_index)) != -1)
+    while ((option = getopt_long(argc, argv, "p:f:d:P::b::t:T:S::s:o:O:N:n:M::m:hicFDG:C:a:T:r:RA:",long_options, &option_index)) != -1)
     switch (option)
     {
 	case 'r':
@@ -456,12 +436,21 @@ int main(int argc, char *argv[])
 
 	case 'P':
 	    if (!optarg) (void)print_plugins_summary(DATADIR"/hashkill/plugins");
-		else print_plugin_detailed(optarg);
+	    else print_plugin_detailed(optarg);
     	    exit(EXIT_SUCCESS);
 	break;
 
 	case 'a':
+	    free(padditional_options);
+	    padditional_options = malloc(strlen(optarg)+1);
+	    strcpy(padditional_options,optarg);
 	    process_addopts(optarg);
+	break;
+
+	case 'A':
+	    free(additional_options);
+	    additional_options = malloc(strlen(optarg)+1);
+	    strcpy(additional_options,optarg);
 	break;
 
 	case 'c':
@@ -560,23 +549,6 @@ int main(int argc, char *argv[])
         case 't':
 	    ocl_gpu_platform = atoi(optarg);
 	break;
-	
-	case 'A':
-	{
-		char temp[128];
-		char *p;
-		char *lasts = NULL;
-		strcpy(temp, optarg);
-		ocl_gpu_device_num = 0;
-		p = strtok_r(temp, ",", &lasts);
-	    while (p!=NULL)
-	    {
-			ocl_gpu_devices[ocl_gpu_device_num++] = atoi(p);
-			printf("device %d\n", atoi(p));
-			p = strtok_r(NULL, ",", &lasts);
-		}
-	}
-	break;
 
         
         case 'M':
@@ -614,6 +586,13 @@ int main(int argc, char *argv[])
     }
 
 
+    /* First check if out_cracked_file and out_uncracked_file are good */
+    if (out_cracked_file)
+    if (hash_err == check_out_file(out_cracked_file)) exit(1);
+    if (out_uncracked_file)
+    if (hash_err == check_out_file(out_uncracked_file)) exit(1);
+
+
     if (fvalue) 
     {
 	strncpy(hashlist_file,fvalue,254);
@@ -641,8 +620,8 @@ int main(int argc, char *argv[])
     		exit(EXIT_FAILURE);
 	    }
 	}
-	strncpy(hash_cmdline,argv[optind],255);
-	if (load_single_hash(argv[optind]) == hash_err)
+	strncpy(hash_cmdline,argv[optind],HASHFILE_MAX_LINE_LENGTH);
+	if (load_single_hash(hash_cmdline) == hash_err)
 	{
 	    if (!fvalue) 
 	    {
@@ -652,60 +631,54 @@ int main(int argc, char *argv[])
 	}
     }
 
-	if (strcmp(get_current_plugin(),"bitcoin")!=0)
+
+    if (strcmp(get_current_plugin(),"bitcoin")!=0)
     {
 
-#if 1
-		/* Detect CPU features and setup optimized routines */
-		if (cpu_feat_setup() == hash_err)
-		{
-			elog("No x86 CPU found! %s\n","");
-			exit(1);
-		}
-#endif
-		/* Hashes num */
-		hashes_count = get_hashes_num();
-		
-		/* Bruteforce? */
-		if ((bflag)&&(!dvalue)&&(!rflag))
-		{
-			fast_markov = 0; // do not mess with the charset in the opencl code
-			attack_method = attack_method_simple_bruteforce;
-		}
-		/* sl3 plugin is an exception: bruteforce only! */
-		if (strcmp(get_current_plugin(),"sl3")==0)
-		{
-			attack_method = attack_method_simple_bruteforce;
-		}
+	/* Hashes num */
+	hashes_count = get_hashes_num();
 
-		if ((attack_method != attack_method_simple_bruteforce) && ((attack_method != attack_method_markov)) && (attack_method != attack_method_rule))
-		{
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
+	/* Bruteforce? */
+	if ((bflag)&&(!dvalue)&&(!rflag))
+	{
+	    fast_markov = 0; // do not mess with the charset in the opencl code
+	    attack_method = attack_method_simple_bruteforce;
+	}
+
     
-		/* threads sizing */
-		if ((get_hashes_num() == 0)&&(hashgen_stdout_mode==0))
-		{
-			elog("No hashes loaded!%s (try --help)\n","");
-			exit(EXIT_FAILURE);
-		}
-    	 
-		if (cpu_thread_factor==0) 
-		{
-			hash_num_threads = hash_num_cpu();
-			//hlog("hash_num_threads %d", hash_num_threads);
-		}
-		else hash_num_threads = cpu_thread_factor;
+	/* sl3 plugin is an exception: bruteforce only! */
+	if (strcmp(get_current_plugin(),"sl3")==0)
+	{
+	    attack_method = attack_method_simple_bruteforce;
+	}
+
+	if ((attack_method != attack_method_simple_bruteforce) && ((attack_method != attack_method_markov)) && (attack_method != attack_method_rule))
+	{
+	    usage(argv[0]);
+	    exit(EXIT_FAILURE);
+	}
+    
+	/* threads sizing */
+	if ((get_hashes_num() == 0)&&(hashgen_stdout_mode==0))
+	{
+	    elog("No hashes loaded!%s (try --help)\n","");
+	    exit(EXIT_FAILURE);
+	}
+    
+	if (cpu_thread_factor==0) 
+	{
+	    hash_num_threads = hash_num_cpu();
+	}
+	else hash_num_threads = cpu_thread_factor;
     }
     else attack_method = attack_method_simple_bruteforce;
     time1=time(NULL);
-	
-	/* CPU optimize single hacks */
+
+    /* CPU optimize single hacks */
     if (strcmp(get_current_plugin(),"md5")==0)
     {
-		if ((attack_method==attack_method_simple_bruteforce)&&(bruteforce_end>7)) cpu_optimize_single=2;
-		else if ((attack_method==attack_method_markov)&&(markov_max_len>7)) cpu_optimize_single=2;
+	if ((attack_method==attack_method_simple_bruteforce)&&(bruteforce_end>7)) cpu_optimize_single=2;
+	else if ((attack_method==attack_method_markov)&&(markov_max_len>7)) cpu_optimize_single=2;
     }
     if ((hash_list)&&(hash_list->next)) cpu_optimize_single=0;
 
@@ -790,7 +763,7 @@ int main(int argc, char *argv[])
         print_cracked_list_to_file(out_cracked_file);
     }
     
-    if (hash_plugin_is_special()==0)
+    if ((hash_plugin_is_special)&&(hash_plugin_is_special()==0))
     {
     
 	if (out_uncracked_file)

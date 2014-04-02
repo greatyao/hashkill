@@ -242,10 +242,10 @@ __md5_crypt_r (key, salt, buffer, buflen, vectorsize)
      parts.  */
   for (i=0;i<vectorsize;i++)
   {
-	cp = strncpy (buffer[i], md5_salt_prefix, MAX (0, buflen[i]));
+	cp = __stpncpy (buffer[i], md5_salt_prefix, MAX (0, buflen[i]));
 	buflen[i] -= sizeof (md5_salt_prefix) - 1;
 
-	cp = strncpy (cp, salt, MIN ((size_t) MAX (0, buflen), salt_len));
+	cp = __stpncpy (cp, salt, MIN ((size_t) MAX (0, buflen), salt_len));
 	buflen[i] -= MIN ((size_t) MAX (0, buflen), salt_len);
 
 	if (buflen[i] > 0)

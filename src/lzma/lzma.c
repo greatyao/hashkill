@@ -256,7 +256,7 @@ char* kernel_decompress(char *filename)
     return NULL;
   }
 
-  ofname = tempnam("./", "hashkill_kernel");
+  ofname = tempnam("/tmp", "hashkill_kernel");
 
   if (OutFile_Open(&outStream.file, ofname) != 0)
   {

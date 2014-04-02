@@ -3,6 +3,8 @@ BINDIR = $(bindir)
 IDATADIR = $(datadir)
 DATADIR = "$(datadir)"
 MAN = $(mandir)
+export CL_AMDFLAGS
+export CL_NVFLAGS
 export BINDIR
 export DATADIR
 export IDATADIR
@@ -10,6 +12,7 @@ export IDATADIR
 # this lists the binaries to produce, the (non-PHONY, binary) targets in
 # the previous manual Makefile
 bin_PROGRAMS = hashkill
+
 
 
 LIBTOOL = @LIBTOOL@ --silent 
@@ -44,8 +47,9 @@ cpu-serpent.c cpu-twofish.c ocl_truecrypt.c ocl_lastpass.c ocl_keepass.c ocl_moz
 ocl_keyring.c ocl_kwallet.c bad_blowfish.c ocl_msoffice-old.c ocl_pdf.c ocl_sha384.c ocl_odf.c \
 ocl_grub2.c ocl_androidfde.c ocl_androidpin.c ocl_osx-ml.c ocl_a51.c
 
+#ocl_test.c
 # forced static linkage below
-hashkill_LDFLAGS =  -static-libtool-libs -ldl -static -Bstatic -lcrypto -L./ -lOpenCL -L/lib  -lrt -lz -lm $(JS_LIBS)
+hashkill_LDFLAGS =  -static-libtool-libs -ldl -static -Bstatic -lcrypto  -L/lib  -lrt -lz -lm $(JS_LIBS)
 # dynamic linkage below
 #hashkill_LDFLAGS =  -ldl -lcrypto  -L/lib  -lrt -lz -lm $(JS_LIBS)
 

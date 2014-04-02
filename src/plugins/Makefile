@@ -7,19 +7,22 @@ CFLAGS += -Wall -I../ -shared -g -O3 -fpic  -fomit-frame-pointer -funroll-loops 
 #CFLAGS = -Wall -I../ -shared  -O2 -fpic  -fomit-frame-pointer -minline-all-stringops  -Wall -funroll-loops -m32
 
 
-CC = gcc 
+CC = gcc
 
 
 all: plugin_md5 plugin_md5md5 plugin_joomla plugin_sha1 plugin_smf plugin_md4 \
      plugin_ntlm plugin_desunix plugin_oscommerce plugin_mysql5 plugin_ipb2 plugin_vbulletin \
      plugin_mssql-2000 plugin_mssql-2005 plugin_phpbb3 plugin_wordpress plugin_sha256 \
      plugin_sha512 plugin_apr1 plugin_md5unix plugin_sha512unix plugin_privkey plugin_oracle11g \
-     plugin_pixmd5 plugin_sl3 plugin_ripemd160 plugin_sha1sha1 plugin_lm plugin_oracle-old \
+     plugin_pixmd5 plugin_ripemd160 plugin_sha1sha1 plugin_lm plugin_oracle-old \
      plugin_nsldap plugin_nsldaps plugin_sapg plugin_mscash plugin_mediawiki plugin_zip plugin_osxlion \
      plugin_mscash2 plugin_wpa plugin_rar plugin_dmg plugin_osx-old plugin_bfunix plugin_drupal7 \
      plugin_django256 plugin_sha256unix plugin_o5logon plugin_mssql2012 plugin_msoffice \
-     plugin_msoffice-old plugin_luks plugin_pdf
-     #plugin_bitcoin  plugin_mysql-old 
+     plugin_msoffice-old plugin_luks plugin_whirlpool plugin_truecrypt plugin_lastpass \
+     plugin_keepass plugin_pdf plugin_keyring plugin_pwsafe plugin_mozilla plugin_kwallet \
+     plugin_sha384 plugin_odf plugin_grub2 plugin_androidfde plugin_androidpin plugin_samsungpin \
+     plugin_osx-ml plugin_a51
+     #plugin_bitcoin  plugin_mysql-old plugin_test 
 
 
 plugin_md5:
@@ -86,9 +89,6 @@ plugin_mysql-old:
 
 plugin_privkey:
 	@if [ ! -e privkey.so ]; then  $(CC)  plugin.c privkey.c -o privkey.so $(CFLAGS) $(LDFLAGS)   ;fi
-
-plugin_sl3:
-	@if [ ! -e sl3.so ]; then  $(CC)  plugin.c sl3.c -o sl3.so $(CFLAGS) $(LDFLAGS)   ;fi
 
 plugin_ripemd160:
 	@if [ ! -e ripemd160.so ]; then  $(CC)  plugin.c ripemd160.c -o ripemd160.so $(CFLAGS) $(LDFLAGS) ;fi
@@ -184,21 +184,74 @@ plugin_msoffice-old:
 plugin_luks:
 	@if [ ! -e luks.so ]; then  $(CC)  plugin.c luks.c -o luks.so $(CFLAGS) $(LDFLAGS) -lcrypto -Wall -funroll-all-loops ;fi
 
+plugin_whirlpool:
+	@if [ ! -e whirlpool.so ]; then  $(CC)  plugin.c whirlpool.c -o whirlpool.so $(CFLAGS) $(LDFLAGS) -Wall -funroll-all-loops ;fi
+
+plugin_truecrypt:
+	@if [ ! -e truecrypt.so ]; then  $(CC)  plugin.c truecrypt.c -o truecrypt.so $(CFLAGS) $(LDFLAGS) -Wall -funroll-all-loops -lcrypto;fi
+
+plugin_lastpass:
+	@if [ ! -e lastpass.so ]; then  $(CC)  plugin.c lastpass.c -o lastpass.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_keepass:
+	@if [ ! -e keepass.so ]; then  $(CC)  plugin.c keepass.c -o keepass.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
 plugin_pdf:
-	@if [ ! -e pdf.so ]; then  $(CC)  plugin.c pdf.c -o pdf.so $(CFLAGS) $(LDFLAGS) -lcrypto -Wall -funroll-all-loops ;fi
+	@if [ ! -e pdf.so ]; then  $(CC)  plugin.c pdf.c -o pdf.so $(CFLAGS) $(LDFLAGS) -Wall -lcrypto;fi
+
+plugin_mozilla:
+	@if [ ! -e mozilla.so ]; then  $(CC)  plugin.c mozilla.c -o mozilla.so $(CFLAGS) $(LDFLAGS) -Wall -lcrypto;fi
+
+plugin_keyring:
+	@if [ ! -e keyring.so ]; then  $(CC)  plugin.c keyring.c -o keyring.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_pwsafe:
+	@if [ ! -e pwsafe.so ]; then  $(CC)  plugin.c pwsafe.c -o pwsafe.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_kwallet:
+	@if [ ! -e kwallet.so ]; then  $(CC)  plugin.c kwallet.c -o kwallet.so $(CFLAGS) $(LDFLAGS) -lcrypto -Wall ;fi
+
+plugin_sha384:
+	@if [ ! -e sha384.so ]; then  $(CC)  plugin.c sha384.c -o sha384.so $(CFLAGS) $(LDFLAGS) ;fi
+
+plugin_odf:
+	@if [ ! -e odf.so ]; then  $(CC)  base64.c plugin.c odf.c -o odf.so $(CFLAGS) $(LDFLAGS) -Wall -lz -lcrypto ;fi
+
+plugin_grub2:
+	@if [ ! -e grub2.so ]; then  $(CC)  plugin.c grub2.c -o grub2.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_osx-ml:
+	@if [ ! -e osx-ml.so ]; then  $(CC)  plugin.c osx-ml.c -o osx-ml.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_androidpin:
+	@if [ ! -e androidpin.so ]; then  $(CC)  plugin.c androidpin.c -o androidpin.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_samsungpin:
+	@if [ ! -e samsungpin.so ]; then  $(CC)  plugin.c samsungpin.c -o samsungpin.so $(CFLAGS) $(LDFLAGS) -Wall ;fi
+
+plugin_androidfde:
+	@if [ ! -e androidfde.so ]; then  $(CC)  plugin.c androidfde.c -o androidfde.so $(CFLAGS) $(LDFLAGS) -lcrypto -Wall ;fi
+
+
+plugin_test:
+	@if [ ! -e test.so ]; then  $(CC)  plugin.c test.c -o test.so $(CFLAGS) $(LDFLAGS) ;fi
+
+plugin_a51:
+	@if [ ! -e a51.so ]; then  $(CC)  plugin.c a51.c -o a51.so $(CFLAGS) $(LDFLAGS) ;fi
+
 
 
 install:
 	@echo Copying plugins...
-	#@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/plugins
-	@cp -vf *.so /usr/local/share/hashkill/plugins/ 
+	@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/plugins
+	@cp -vf *.so $(IDESTDIR)$(IDATADIR)/hashkill/plugins
 	@echo Done
 
 install-strip:
 	@echo Copying plugins...
 	-strip *.so
-	#@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/plugins
-	@cp -vf *.so $(IDESTDIR)$(IDATADIR)/hashkill/plugins 
+	@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/plugins
+	@cp -vf *.so $(IDESTDIR)$(IDATADIR)/hashkill/plugins
 	@echo Done
 
 

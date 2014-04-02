@@ -1,26 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include "lzma/lzma.h"
-#include "err.h"
-#include "ocl-base.h"
+#include "compiler.h"
+#include <sys/types.h>
+#include <fcntl.h>
 
 #define CL_CONTEXT_OFFLINE_DEVICES_AMD        0x403F
-
-void checkErr( char * func, cl_int err );
-
-
-char *readProgramSrc( char * filename );
-int bfimagic=0;
-int optdisable=0;
-int big16=0;
 
 #define ALGO_THRESHOLD 100
 #define ALGO_THRESHOLD_BIG 180
 #define ALGO_THRESHOLD_XXL 280
 #define ALGO_THRESHOLD_SMALL 16
-
 
 
 static void bfi_int_magic(unsigned char *kernel, int len,int shortk)
@@ -79,9 +66,6 @@ static void bfi_int_magic(unsigned char *kernel, int len,int shortk)
 
 }
 
-
-
-
 static void bfi_int_magic_old(unsigned char *kernel, int len,int shortk)
 {
     unsigned int j,i,k;
@@ -115,12 +99,6 @@ static void bfi_int_magic_old(unsigned char *kernel, int len,int shortk)
         }
     }
 }
-
-
-
-
-
-
 
 int compile(char *filename, char *buildparams)
 {
@@ -211,15 +189,15 @@ int compile(char *filename, char *buildparams)
         if (strstr(pbuf,"Cats")) continue;
         if (strstr(pbuf,"Raccoons")) continue;
 
-	printf("building for %s\n",pbuf);
 	char flags[1000];
 	char flags1[1000];
 	//-save-temps=test
 	if (strstr(pbuf,"ATI")) sprintf(flags,"-fno-bin-amdil -fno-bin-llvmir -fno-bin-source -DOLD_ATI   %s",buildparams);
 	else if (strstr(pbuf,"Cayman"))  sprintf(flags,"-fno-bin-amdil -fno-bin-llvmir -fno-bin-source -DVLIW4  -Dcl_amd_media_ops2 %s",buildparams);
 	else if ((strstr(pbuf,"Capeverde"))||(strstr(pbuf,"Pitcairn"))||(strstr(pbuf,"Tahiti")))  sprintf(flags,"-fno-bin-amdil -fno-bin-llvmir -fno-bin-source -DGCN  -Dcl_amd_media_ops2 %s",buildparams);
-	else sprintf(flags,"-fno-bin-amdil -fno-bin-llvmir -fno-bin-source  -Dcl_amd_media_ops2  %s",buildparams);
-	if (optdisable==1) sprintf(flags,"%s -cl-opt-disable -fno-bin-amdil -fno-bin-llvmir -fno-bin-source -Dcl_amd_media_ops2 -O0",flags);
+	else sprintf(flags,"-fno-bin-amdil -fno-bin-llvmir -fno-bin-source   %s",buildparams);
+	if (optdisable==1) sprintf(flags,"%s -cl-opt-disable -fno-bin-amdil -fno-bin-llvmir -fno-bin-source -O0 ",flags);
+	printf("%s: building for %s \n%s: flags = %s\n",filename,pbuf,filename,flags);
 	if (big16==1) 
 	{
 	strcpy(flags1,flags);
@@ -308,7 +286,6 @@ int compile(char *filename, char *buildparams)
 	}
 	binary_sizes = (size_t *)malloc( sizeof(size_t)*nDevices );
 	binaries = (char **)malloc( sizeof(char *)*nDevices );
-
 	err = _clGetProgramInfo( program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t)*(nDevices), binary_sizes, NULL );
 	checkErr( "clGetProgramInfo", err );
 
@@ -317,6 +294,7 @@ int compile(char *filename, char *buildparams)
 	    if( binary_sizes[j] != 0 )
 	    {
     		binaries[j] = (char *)malloc( sizeof(char)*binary_sizes[j] );
+		printf("%s: compilation for %s successful (size = %d KB)\n",filename,pbuf,binary_sizes[j]/1024);
 	    }
 	    else
 	    {
@@ -378,6 +356,10 @@ int compile(char *filename, char *buildparams)
         	if (!ofname) exit(1);
         	unlink(outfilename);
         	rename(ofname,outfilename);
+        	int fd=open(outfilename,O_RDONLY);
+        	size_t fsize = lseek(fd,0,SEEK_END);
+        	close(fd);
+        	printf("%s: compressed %s kernel (compressed size = %d KB)\n",filename,pbuf,fsize/1024);
         	free(ofname);
     	    }
 	}
@@ -390,65 +372,6 @@ int compile(char *filename, char *buildparams)
     free(platforms);
     free(devices);
     return 0;
-}
-
-char *
-readProgramSrc( char *filename )
-{
-    FILE * input = NULL;
-    size_t size = 0;
-    char * programSrc = NULL;
-
-    input = fopen( filename, "rb" );
-    if( input == NULL )
-    {
-        return( NULL );
-    }
-    fseek( input, 0L, SEEK_END );
-    size = ftell( input );
-    rewind( input );
-    programSrc = (char *)malloc( size + 1 );
-    fread( programSrc, sizeof(char), size, input );
-    programSrc[size] = 0;
-    fclose (input);
-
-    return( programSrc );
-}
-
-void
-checkErr( char *func, cl_int err )
-{
-    if( err != CL_SUCCESS )
-    {
-        fprintf( stderr, "%s(): ", func );
-        switch( err )
-        {
-        case CL_BUILD_PROGRAM_FAILURE:  fprintf (stderr, "CL_BUILD_PROGRAM_FAILURE"); break;
-        case CL_COMPILER_NOT_AVAILABLE: fprintf (stderr, "CL_COMPILER_NOT_AVAILABLE"); break;
-        case CL_DEVICE_NOT_AVAILABLE:   fprintf (stderr, "CL_DEVICE_NOT_AVAILABLE"); break;
-        case CL_DEVICE_NOT_FOUND:       fprintf (stderr, "CL_DEVICE_NOT_FOUND"); break;
-        case CL_INVALID_BINARY:         fprintf (stderr, "CL_INVALID_BINARY"); break;
-        case CL_INVALID_BUILD_OPTIONS:  fprintf (stderr, "CL_INVALID_BUILD_OPTIONS"); break;
-        case CL_INVALID_CONTEXT:        fprintf (stderr, "CL_INVALID_CONTEXT"); break;
-        case CL_INVALID_DEVICE:         fprintf (stderr, "CL_INVALID_DEVICE"); break;
-        case CL_INVALID_DEVICE_TYPE:    fprintf (stderr, "CL_INVALID_DEVICE_TYPE"); break;
-        case CL_INVALID_OPERATION:      fprintf (stderr, "CL_INVALID_OPERATION"); break;
-        case CL_INVALID_PLATFORM:        fprintf (stderr, "CL_INVALID_PLATFORM"); break;
-        case CL_INVALID_PROGRAM:        fprintf (stderr, "CL_INVALID_PROGRAM"); break;
-        case CL_INVALID_VALUE:          fprintf (stderr, "CL_INVALID_VALUE"); break;
-        case CL_OUT_OF_HOST_MEMORY:     fprintf (stderr, "CL_OUT_OF_HOST_MEMORY"); break;
-        default:                        fprintf (stderr, "Unknown error code: %d", err); break;
-        }
-        fprintf (stderr, "\n");
-    }
-}
-
-
-
-void usage()
-{
-    printf("Usage: compile kernel.cl <nsdmb>\n");
-    exit(1);
 }
 
 int main(int argc, char *argv[])
@@ -476,52 +399,52 @@ int main(int argc, char *argv[])
 
     if (big16==1)
     {
-	printf("\nCompiling %s with BIG16...\n",argv[1]);
+	//printf("\nCompiling %s with BIG16...\n",argv[1]);
 	compile(argv[1],"");
 	return 0;
     }
 
-    printf("\nCompiling %s without flags...\n",argv[1]);
+    //printf("\nCompiling %s without flags...\n",argv[1]);
     compile(argv[1],"");
     if (csingle==1)
     {
-	printf("\nCompiling %s with SINGLE_MODE...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE...\n",argv[1]);
 	compile(argv[1],"-DSINGLE_MODE");
     }
     if (cdouble==1)
     {
-	printf("\nCompiling %s with DOUBLE...\n",argv[1]);
+	//printf("\nCompiling %s with DOUBLE...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE");
     }
 
     if (cmax8==1)
     {
-	printf("\nCompiling %s with MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with MAX8...\n",argv[1]);
 	compile(argv[1],"-DMAX8");
     }
 
 
     if ((csingle==1) && (cdouble==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and DOUBLE...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and DOUBLE...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DSINGLE_MODE");
     }
 
     if ((csingle==1) && (cdouble==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and DOUBLE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and DOUBLE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DSINGLE_MODE -DMAX8");
     }
 
     if ((csingle==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DSINGLE_MODE -DMAX8");
     }
 
     if ((cdouble==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with DOUBLE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with DOUBLE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DMAX8");
     }
     return 0;

@@ -44,14 +44,14 @@ nvidia_keyring nvidia_kwallet nvidia_msoffice_old nvidia_msoffice_old_md5 nvidia
 nvidia_sha384 nvidia_sha384_long nvidia_pdf6 nvidia_odf nvidia_odf2 nvidia_grub2 nvidia_androidfde nvidia_osxml
 
 
-build: #build_amd build_nvidia
+build: build_amd build_nvidia
 
 
 install: 
 	@echo "Copying kernels..."
-	#@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/kernels
-	#@touch placeholder_kernel.dummy
-	#@cp  *_*.* $(IDESTDIR)$(IDATADIR)/hashkill/kernels;
+	@mkdir -p $(IDESTDIR)$(IDATADIR)/hashkill/kernels
+	@touch placeholder_kernel.dummy
+	@cp  *_*.* $(IDESTDIR)$(IDATADIR)/hashkill/kernels;
 	@echo Done.
 
 clean:

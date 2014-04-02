@@ -1,17 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "lzma/lzma.h"
-#include "err.h"
-#include "ocl-base.h"
+#include "compiler.h"
+#include <sys/types.h>
+#include <fcntl.h>
 
-
-
-void checkErr( char * func, cl_int err );
-char *readProgramSrc( char * filename );
-int bfimagic=0;
-int optdisable=0;
-int big16=0;
 int iter = 0;
 
 int compile(char *filename, char *buildparams)
@@ -35,7 +25,7 @@ int compile(char *filename, char *buildparams)
     int csingle=0;
     int cmax8=0;
     int smiter=0;
-    char archs[7][5] = { "sm10", "sm11", "sm12", "sm13", "sm20", "sm21", "sm30" };
+    char archs[8][5] = { "sm10", "sm11", "sm12", "sm13", "sm20", "sm21", "sm30", "sm35" };
     char *ofname;
     
     sprintf(fullname,"../%s.cl",filename);
@@ -133,24 +123,38 @@ int compile(char *filename, char *buildparams)
 	    {
 		case 0:
 		    sprintf(flags,"%s -cl-nv-arch sm_10 -DSM10",flags);
+		    printf("%s: building for sm_10\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 1:
 		    sprintf(flags,"%s -cl-nv-arch sm_11",flags);
+		    printf("%s: building for sm_11\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 2:
 		    sprintf(flags,"%s -cl-nv-arch sm_12",flags);
+		    printf("%s: building for sm_12\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 3:
 		    sprintf(flags,"%s -cl-nv-arch sm_13",flags);
+		    printf("%s: building for sm_13\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 4:
 		    sprintf(flags,"%s -cl-nv-arch sm_20 ",flags);
+		    printf("%s: building for sm_20\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 5:
 		    sprintf(flags,"%s -cl-nv-arch sm_21 -DSM21",flags);
+		    printf("%s: building for sm_21\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 		case 6:
 		    sprintf(flags,"%s -cl-nv-arch sm_30 ",flags);
+		    printf("%s: building for sm_30\n",filename);
+		    printf("%s: flags = %s\n",filename,flags);
 		    break;
 	    }
 	    char *eflags="";
@@ -176,6 +180,30 @@ int compile(char *filename, char *buildparams)
 	    if( binary_sizes[i] != 0 )
 	    {
     		binaries[i] = (char *)malloc( sizeof(char)*binary_sizes[i] );
+    		switch (smiter)
+    		{
+    		    case 0: 
+    			printf("%s: compilation for sm_10 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 1: 
+    			printf("%s: compilation for sm_11 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 2: 
+    			printf("%s: compilation for sm_12 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 3: 
+    			printf("%s: compilation for sm_13 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 4: 
+    			printf("%s: compilation for sm_20 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 5: 
+    			printf("%s: compilation for sm_21 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		    case 6: 
+    			printf("%s: compilation for sm_30 successful (size = %d KB)\n",filename,binary_sizes[i]/1024);
+    			break;
+    		}
 	    }
 	    else
 	    {
@@ -254,6 +282,33 @@ int compile(char *filename, char *buildparams)
                 if (!ofname) exit(1);
                 unlink(outfilename);
                 rename(ofname,outfilename);
+                int fd = open(outfilename,O_RDONLY);
+                size_t fsize = lseek(fd,0,SEEK_END);
+                close(fd);
+                switch (smiter)
+                {
+            	    case 0:
+            		printf("%s: compressed sm_10 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 1:
+            		printf("%s: compressed sm_11 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 2:
+            		printf("%s: compressed sm_12 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 3:
+            		printf("%s: compressed sm_13 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 4:
+            		printf("%s: compressed sm_20 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 5:
+            		printf("%s: compressed sm_21 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	    case 6:
+            		printf("%s: compressed sm_30 kernel (compressed size = %d KB)\n",filename,fsize/1024);
+            		break;
+            	}
                 free(ofname);
             }
 
@@ -365,13 +420,14 @@ int compile_big16(char *filename, char *buildparams)
 	
 	switch (ccmax)
 	{
-	    case 10: if (smiter>0) smiter=7; break;
-	    case 11: if (smiter>1) smiter=7; break;
-	    case 12: if (smiter>2) smiter=7; break;
-	    case 13: if (smiter>3) smiter=7; break;
-	    case 20: if (smiter>4) smiter=7; break;
-	    case 21: if (smiter>5) smiter=7; break;
-	    case 30: if (smiter>6) smiter=7; break;
+	    case 10: if (smiter>0) smiter=8; break;
+	    case 11: if (smiter>1) smiter=8; break;
+	    case 12: if (smiter>2) smiter=8; break;
+	    case 13: if (smiter>3) smiter=8; break;
+	    case 20: if (smiter>4) smiter=8; break;
+	    case 21: if (smiter>5) smiter=8; break;
+	    case 30: if (smiter>6) smiter=8; break;
+	    case 35: if (smiter>7) smiter=8; break;
 	}
 
 	for (i=0;i<1; i++)
@@ -408,6 +464,9 @@ int compile_big16(char *filename, char *buildparams)
 		    break;
 		case 6:
 		    sprintf(flags,"%s -cl-nv-arch sm_30 ",flags);
+		    break;
+		case 7:
+		    sprintf(flags,"%s -cl-nv-arch sm_35 ",flags);
 		    break;
 	    }
 	    char *eflags="";
@@ -468,6 +527,9 @@ int compile_big16(char *filename, char *buildparams)
 		case 6:
 		    sprintf(pbuf,"sm30");
 		    break;
+		case 7:
+		    sprintf(pbuf,"sm35");
+		    break;
 	    }
 
     	    if (strstr(buildparams,"SINGLE_MODE"))
@@ -522,69 +584,7 @@ int compile_big16(char *filename, char *buildparams)
 
     free(platforms);
     free(devices);
-    return (0);}
-
-
-
-
-
-
-char *
-readProgramSrc( char *filename )
-{
-    FILE * input = NULL;
-    size_t size = 0;
-    char * programSrc = NULL;
-
-    input = fopen( filename, "rb" );
-    if( input == NULL )
-    {
-        return( NULL );
-    }
-    fseek( input, 0L, SEEK_END );
-    size = ftell( input );
-    rewind( input );
-    programSrc = (char *)malloc( size + 1 );
-    fread( programSrc, sizeof(char), size, input );
-    programSrc[size] = 0;
-    fclose (input);
-
-    return( programSrc );
-}
-
-
-void
-checkErr( char *func, cl_int err )
-{
-    if( err != CL_SUCCESS )
-    {
-        fprintf( stderr, "%s(): ", func );
-        switch( err )
-        {
-        case CL_BUILD_PROGRAM_FAILURE:  fprintf (stderr, "CL_BUILD_PROGRAM_FAILURE"); break;
-        case CL_COMPILER_NOT_AVAILABLE: fprintf (stderr, "CL_COMPILER_NOT_AVAILABLE"); break;
-        case CL_DEVICE_NOT_AVAILABLE:   fprintf (stderr, "CL_DEVICE_NOT_AVAILABLE"); break;
-        case CL_DEVICE_NOT_FOUND:       fprintf (stderr, "CL_DEVICE_NOT_FOUND"); break;
-        case CL_INVALID_BINARY:         fprintf (stderr, "CL_INVALID_BINARY"); break;
-        case CL_INVALID_BUILD_OPTIONS:  fprintf (stderr, "CL_INVALID_BUILD_OPTIONS"); break;
-        case CL_INVALID_CONTEXT:        fprintf (stderr, "CL_INVALID_CONTEXT"); break;
-        case CL_INVALID_DEVICE:         fprintf (stderr, "CL_INVALID_DEVICE"); break;
-        case CL_INVALID_DEVICE_TYPE:    fprintf (stderr, "CL_INVALID_DEVICE_TYPE"); break;
-        case CL_INVALID_OPERATION:      fprintf (stderr, "CL_INVALID_OPERATION"); break;
-        case CL_INVALID_PLATFORM:        fprintf (stderr, "CL_INVALID_PLATFORM"); break;
-        case CL_INVALID_PROGRAM:        fprintf (stderr, "CL_INVALID_PROGRAM"); break;
-        case CL_INVALID_VALUE:          fprintf (stderr, "CL_INVALID_VALUE"); break;
-        case CL_OUT_OF_HOST_MEMORY:     fprintf (stderr, "CL_OUT_OF_HOST_MEMORY"); break;
-        default:                        fprintf (stderr, "Unknown error code: %d", err); break;
-        }
-        fprintf (stderr, "\n");
-    }
-}
-
-void usage()
-{
-    printf("Usage: compile kernel.cl <nsdmb>\n");
-    exit(1);
+    return (0);
 }
 
 int main(int argc, char *argv[])
@@ -611,54 +611,53 @@ int main(int argc, char *argv[])
     if (big16==1)
     {
 	iter = atoi(argv[3]);
-        printf("\nCompiling %s without flags (BIG16, iter=%d)...\n",argv[1],iter);
+        //printf("\nCompiling %s without flags (BIG16, iter=%d)...\n",argv[1],iter);
 	compile_big16(argv[1],"");
 	return 0;
     }
 
-    printf("\nCompiling %s without flags...\n",argv[1]);
+    //printf("\nCompiling %s without flags...\n",argv[1]);
     compile(argv[1],"");
     if (csingle==1)
     {
-	printf("\nCompiling %s with SINGLE_MODE...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE...\n",argv[1]);
 	compile(argv[1],"-DSINGLE_MODE");
     }
     if (cdouble==1)
     {
-	printf("\nCompiling %s with DOUBLE...\n",argv[1]);
+	//printf("\nCompiling %s with DOUBLE...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE");
     }
 
     if (cmax8==1)
     {
-	printf("\nCompiling %s with MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with MAX8...\n",argv[1]);
 	compile(argv[1],"-DMAX8");
     }
 
 
     if ((csingle==1) && (cdouble==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and DOUBLE...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and DOUBLE...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DSINGLE_MODE");
     }
 
     if ((csingle==1) && (cdouble==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and DOUBLE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and DOUBLE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DSINGLE_MODE -DMAX8");
     }
 
     if ((csingle==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with SINGLE_MODE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with SINGLE_MODE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DSINGLE_MODE -DMAX8");
     }
 
     if ((cdouble==1) && (cmax8==1))
     {
-	printf("\nCompiling %s with DOUBLE and MAX8...\n",argv[1]);
+	//printf("\nCompiling %s with DOUBLE and MAX8...\n",argv[1]);
 	compile(argv[1],"-DDOUBLE -DMAX8");
     }
-
-
+    return 0;
 }

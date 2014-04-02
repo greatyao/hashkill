@@ -554,6 +554,22 @@ hash_stat ocl_get_device()
 	    {
 		loops*=2;
 	    }
+
+	    /* Using speciied devices? */
+	    if(ocl_gpu_device_num > 0)
+	    {
+		int found = 0;
+		int ii;
+		for(ii = 0; ii < ocl_gpu_device_num; ii++)
+		{
+		    if(ocl_gpu_devices[ii] == a)
+		    {
+			found = 1;
+			break;
+		    }
+		}
+		if(found == 0) continue;
+	    }
 	
 	    /* Now add collected information to wthreads */
 	    for (b=0;b<ocl_threads;b++)

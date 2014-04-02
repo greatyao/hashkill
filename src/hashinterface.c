@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <termios.h>
+#include <arpa/inet.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/des.h>
@@ -40,22 +41,45 @@
 #include <openssl/rsa.h>
 #include <openssl/hmac.h>
 #include <openssl/ripemd.h>
+#include <openssl/whrlpool.h>
 #include <openssl/rc4.h>
 #include <openssl/aes.h>
 #include <openssl/md4.h>
 #include <openssl/des.h>
+#include <openssl/bn.h>
 #include "err.h"
 #include "hashinterface.h"
 #include "threads.h"
 #include "plugins.h"
 #include "cpu-feat.h"
+#include "cpu-serpent.h"
+#include "cpu-twofish.h"
 
 
+// Check windows - TBD
+#if _WIN32 || _WIN64
+#if _WIN64
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+// Check GCC
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+typedef uint64_t __attribute__((__may_alias__)) uint64;
 
 
 /* Global variables */
 char temp_username[HASHFILE_MAX_PLAIN_LENGTH];	// temporary username
-char temp_salt[HASHFILE_MAX_PLAIN_LENGTH];	// temporary salt
+char temp_salt[256];				// temporary salt
 char temp_salt2[HASHFILE_MAX_PLAIN_LENGTH];	// temporary salt2
 char temp_hash[HASHFILE_MAX_PLAIN_LENGTH];	// temporary hash
 
@@ -68,6 +92,7 @@ void hash_proto_sha1_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]
 void hash_proto_sha256_unicode(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]);
 void hash_proto_sha256_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]);
 void hash_proto_sha512_unicode(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]);
+void hash_proto_sha384_unicode(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE]);
 void hash_proto_sha512_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]);
 hash_stat hash_proto_fcrypt(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]);
 hash_stat hash_proto_fcrypt_slow(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]);
@@ -98,6 +123,7 @@ static struct termios old_term;
 
 #ifdef HAVE_SSE2
 /* Optimized strlen() for x86 architectures */
+/*
 #define strlen my_strlen
 size_t my_strlen(const char *s) {
     size_t len = 0;
@@ -110,6 +136,7 @@ size_t my_strlen(const char *s) {
         s += 4, len += 4;
     }
 }
+*/
 #endif
 
 
@@ -473,6 +500,20 @@ void hash_proto_ripemd160(const char *plaintext[VECTORSIZE], char *hash[VECTORSI
 }
 
 
+/* WHIRLPOOL proto function */
+void hash_proto_whirlpool(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int lens[VECTORSIZE])
+{
+    int a;
+    
+    for (a=0;a<vectorsize;a++)
+    {
+	WHIRLPOOL_CTX ctx;
+	WHIRLPOOL_Init(&ctx);
+	WHIRLPOOL_Update(&ctx, plaintext[a], lens[a]);
+	WHIRLPOOL_Final((unsigned char *)hash[a],&ctx);
+    }
+}
+
 
 /* SHA1 digest -> hex str */
 void hash_proto_sha1_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE])
@@ -630,6 +671,20 @@ void hash_proto_sha512_unicode(const char *plaintext[VECTORSIZE], char *hash[VEC
 	SHA512_Init(&ctx);
 	SHA512_Update(&ctx, plaintext[a], len[a]);
 	SHA512_Final((unsigned char *)hash[a],&ctx);
+    }
+}
+
+/* proto SHA384 function */
+void hash_proto_sha384_unicode(const char *plaintext[VECTORSIZE], char *hash[VECTORSIZE], int len[VECTORSIZE])
+{
+    SHA512_CTX ctx;
+    int a;
+    
+    for (a=0;a<vectorsize;a++)
+    {
+	SHA384_Init(&ctx);
+	SHA384_Update(&ctx, plaintext[a], len[a]);
+	SHA384_Final((unsigned char *)hash[a],&ctx);
     }
 }
 
@@ -880,20 +935,21 @@ void hash_proto_pbkdf2_256_len(const char *pass, int passlen, unsigned char *sal
 
 
 
+
+
 /* PBKDF2 with HMAC_SHA512 */
-void hash_proto_pbkdf512(const char *pass, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)
+void hash_proto_pbkdf512(const char *pass,int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)
 {
     unsigned char digtmp[SHA512_DIGEST_LENGTH], *p, itmp[4];
     int cplen, j, k, tkeylen;
     unsigned long i = 1;
     HMAC_CTX hctx;
-    int passlen = strlen(pass);
+    int passlen = len;
 
     HMAC_CTX_init(&hctx);
     p = out;
     tkeylen = keylen;
     if(!pass) passlen = 0;
-    else if(passlen == -1) passlen = strlen(pass);
     while(tkeylen) 
     {
         if(tkeylen > SHA512_DIGEST_LENGTH) cplen = SHA512_DIGEST_LENGTH;
@@ -909,7 +965,7 @@ void hash_proto_pbkdf512(const char *pass, unsigned char *salt, int saltlen, int
         memcpy(p, digtmp, cplen);
         for(j = 1; j < iter; j++) 
         {
-    	    HMAC(EVP_sha512(), pass, passlen, digtmp, SHA_DIGEST_LENGTH, digtmp, NULL);
+    	    HMAC(EVP_sha512(), pass, passlen, digtmp, SHA512_DIGEST_LENGTH, digtmp, NULL);
     	    for(k = 0; k < cplen; k++) p[k] ^= digtmp[k];
 	}
 	tkeylen-= cplen;
@@ -918,6 +974,86 @@ void hash_proto_pbkdf512(const char *pass, unsigned char *salt, int saltlen, int
     }
     HMAC_CTX_cleanup(&hctx);
 }
+
+
+/* PBKDF2 with HMAC_RIPEMD160 */
+void hash_proto_pbkdfrmd160(const char *pass,int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)
+{
+    unsigned char digtmp[RIPEMD160_DIGEST_LENGTH], *p, itmp[4];
+    int cplen, j, k, tkeylen;
+    unsigned long i = 1;
+    HMAC_CTX hctx;
+    int passlen = len;
+
+    HMAC_CTX_init(&hctx);
+    p = out;
+    tkeylen = keylen;
+    if(!pass) passlen = 0;
+    while(tkeylen) 
+    {
+        if(tkeylen > RIPEMD160_DIGEST_LENGTH) cplen = RIPEMD160_DIGEST_LENGTH;
+        else cplen = tkeylen;
+        itmp[0] = (unsigned char)((i >> 24) & 0xff);
+        itmp[1] = (unsigned char)((i >> 16) & 0xff);
+        itmp[2] = (unsigned char)((i >> 8) & 0xff);
+        itmp[3] = (unsigned char)(i & 0xff);
+        HMAC_Init_ex(&hctx, pass, passlen, EVP_ripemd160(), NULL);
+        HMAC_Update(&hctx, salt, saltlen);
+        HMAC_Update(&hctx, itmp, 4);
+        HMAC_Final(&hctx, digtmp, NULL);
+        memcpy(p, digtmp, cplen);
+        for(j = 1; j < iter; j++) 
+        {
+    	    HMAC(EVP_ripemd160(), pass, passlen, digtmp, RIPEMD160_DIGEST_LENGTH, digtmp, NULL);
+    	    for(k = 0; k < cplen; k++) p[k] ^= digtmp[k];
+	}
+	tkeylen-= cplen;
+	i++;
+	p+= cplen;
+    }
+    HMAC_CTX_cleanup(&hctx);
+}
+
+
+/* PBKDF2 with HMAC_WHIRLPOOL */
+void hash_proto_pbkdfwhirlpool(const char *pass,int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out)
+{
+    unsigned char digtmp[WHIRLPOOL_DIGEST_LENGTH], *p, itmp[4];
+    int cplen, j, k, tkeylen;
+    unsigned long i = 1;
+    HMAC_CTX hctx;
+    int passlen = len;
+
+    HMAC_CTX_init(&hctx);
+    p = out;
+    tkeylen = keylen;
+    if(!pass) passlen = 0;
+    while(tkeylen) 
+    {
+        if(tkeylen > WHIRLPOOL_DIGEST_LENGTH) cplen = WHIRLPOOL_DIGEST_LENGTH;
+        else cplen = tkeylen;
+        itmp[0] = (unsigned char)((i >> 24) & 0xff);
+        itmp[1] = (unsigned char)((i >> 16) & 0xff);
+        itmp[2] = (unsigned char)((i >> 8) & 0xff);
+        itmp[3] = (unsigned char)(i & 0xff);
+        HMAC_Init_ex(&hctx, pass, passlen, EVP_whirlpool(), NULL);
+        HMAC_Update(&hctx, salt, saltlen);
+        HMAC_Update(&hctx, itmp, 4);
+        HMAC_Final(&hctx, digtmp, NULL);
+        memcpy(p, digtmp, cplen);
+        for(j = 1; j < iter; j++) 
+        {
+    	    HMAC(EVP_whirlpool(), pass, passlen, digtmp, WHIRLPOOL_DIGEST_LENGTH, digtmp, NULL);
+    	    for(k = 0; k < cplen; k++) p[k] ^= digtmp[k];
+	}
+	tkeylen-= cplen;
+	i++;
+	p+= cplen;
+    }
+    HMAC_CTX_cleanup(&hctx);
+}
+
+
 
 
 
@@ -995,6 +1131,134 @@ void hash_proto_hmac_sha1_file(void *key, int keylen, char *filename, long offse
 }
 
 
+void hash_proto_decrypt_aes_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)
+{
+    uint8_t T[16], tweak[16];
+    uint32_t i, m, mo, lim, t, tt;
+    uint32_t x;
+    char zeroiv[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    AES_KEY aeskey;
+
+    m  = len >> 4;
+    mo = len & 15;
+    tweak[0]=(sector&255);
+    tweak[1]=(sector>>8)&255;
+    tweak[2]=(sector>>16)&255;
+    tweak[3]=(sector>>24)&255;
+    bzero(tweak+4,12);
+
+    OAES_SET_ENCRYPT_KEY((unsigned char *)key2,256,&aeskey);
+    OAES_CBC_ENCRYPT(tweak, T, 16, &aeskey, (unsigned char *)zeroiv, AES_ENCRYPT);
+
+    if (mo == 0) lim = m;
+    else lim = m - 1;
+
+    for (i = 0; i < lim; i++) 
+    {
+        for (x = 0; x < 16; x += sizeof(uint64_t))
+        *((uint64_t*)&out[i*16+x]) = *((uint64_t*)&in[i*16+x]) ^ *((uint64_t*)&T[x]);
+	OAES_SET_DECRYPT_KEY((unsigned char *)key1,256,&aeskey);
+	bzero(zeroiv,16);
+	OAES_CBC_ENCRYPT((unsigned char *)out+i*16, (unsigned char *)out+i*16, 16, &aeskey, (unsigned char *)zeroiv, AES_DECRYPT);
+        for (x = 0; x < 16; x += sizeof(uint64_t)) 
+        *((uint64_t*)&out[i*16+x]) ^=  *((uint64_t*)&T[x]);
+        for (x = t = 0; x < 16; x++) 
+        {
+            tt = T[x] >> 7;
+            T[x] = ((T[x] << 1) | t) & 0xFF;
+            t = tt;
+        }
+        if (tt) 
+        {
+            T[0] ^= 0x87;
+        }
+    }
+}
+
+
+
+void hash_proto_decrypt_twofish_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)
+{
+    uint8_t T[16], tweak[16];
+    uint32_t i, m, mo, lim, t, tt;
+    uint32_t x;
+    TWOFISH_KEY skey[40];
+
+    m  = len >> 4;
+    mo = len & 15;
+    tweak[0]=(sector&255);
+    tweak[1]=(sector>>8)&255;
+    tweak[2]=(sector>>16)&255;
+    tweak[3]=(sector>>24)&255;
+    bzero(tweak+4,12);
+    TWOFISH_set_key((unsigned char *)key2,256,skey);
+    TWOFISH_encrypt(skey,(char *)tweak, (char *)T);
+
+    if (mo == 0) lim = m;
+    else lim = m - 1;
+
+    for (i = 0; i < lim; i++) 
+    {
+        for (x = 0; x < 16; x += sizeof(uint64_t))
+        *((uint64_t*)&out[i*16+x]) = *((uint64_t*)&in[i*16+x]) ^ *((uint64_t*)&T[x]);
+        TWOFISH_set_key((unsigned char *)key1,256,skey);
+        TWOFISH_decrypt(skey,out+i*16, (char *)out+i*16);
+        for (x = 0; x < 16; x += sizeof(uint64_t)) 
+        *((uint64_t*)&out[i*16+x]) ^=  *((uint64_t*)&T[x]);
+        for (x = t = 0; x < 16; x++) 
+        {
+            tt = T[x] >> 7;
+            T[x] = ((T[x] << 1) | t) & 0xFF;
+            t = tt;
+        }
+        if (tt) 
+        {
+            T[0] ^= 0x87;
+        }
+    }
+}
+
+
+void hash_proto_decrypt_serpent_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block)
+{
+    uint8_t T[16], tweak[16];
+    uint32_t i, m, mo, lim, t, tt;
+    uint32_t x;
+    SERPENT_KEY skey;
+
+    m  = len >> 4;
+    mo = len & 15;
+    tweak[0]=(sector&255);
+    tweak[1]=(sector>>8)&255;
+    tweak[2]=(sector>>16)&255;
+    tweak[3]=(sector>>24)&255;
+    bzero(tweak+4,12);
+    SERPENT_set_key((unsigned char *)key2,256,&skey);
+    SERPENT_encrypt(&skey,(char *)tweak, (char *)T);
+
+    if (mo == 0) lim = m;
+    else lim = m - 1;
+
+    for (i = 0; i < lim; i++) 
+    {
+        for (x = 0; x < 16; x += sizeof(uint64_t))
+        *((uint64_t*)&out[i*16+x]) = *((uint64_t*)&in[i*16+x]) ^ *((uint64_t*)&T[x]);
+        SERPENT_set_key((unsigned char *)key1,256,&skey);
+        SERPENT_decrypt(&skey,out+i*16, (char *)out+i*16);
+        for (x = 0; x < 16; x += sizeof(uint64_t)) 
+        *((uint64_t*)&out[i*16+x]) ^=  *((uint64_t*)&T[x]);
+        for (x = t = 0; x < 16; x++) 
+        {
+            tt = T[x] >> 7;
+            T[x] = ((T[x] << 1) | t) & 0xFF;
+            t = tt;
+        }
+        if (tt) 
+        {
+            T[0] ^= 0x87;
+        }
+    }
+}
 
 
 
@@ -1172,7 +1436,7 @@ int hash_proto_aes_set_decrypt_key(const unsigned char *userKey, const int bits,
 /* Add username to list temp */
 void hash_proto_add_username(const char *username)
 {
-    if (username) strcpy((char *)&temp_username, username);
+    if (username) strncpy((char *)&temp_username, username,MAX_USERNAME-1);
     else temp_username[0]=0;
 }
 
@@ -1195,9 +1459,8 @@ void hash_proto_add_hash(const char *hash, int len)
 /* Add salt to list temp */
 void hash_proto_add_salt(const char *salt)
 {
-    bzero(temp_salt,64);
+    memset(temp_salt,0,256);
     if (salt) memcpy((char *)&temp_salt, salt, strlen(salt));
-    else temp_salt[0]=0;
 }
 
 
@@ -1263,9 +1526,9 @@ hash_stat add_hash_list(char *username, char *hash, char *salt, char *salt2)
     }
     if (salt)
     {
-	temp_list->salt = malloc(salt_size);
-	salt[MAX_SALT-1]=0;
-	strcpy(temp_list->salt, salt);
+	temp_list->salt = malloc(salt_size+1);
+	memset(temp_list->salt,0,salt_size+1);
+	strncpy(temp_list->salt, salt,salt_size);
     }
     if (salt2)
     {
@@ -2231,3 +2494,96 @@ char *str_replace(char *orig, char *rep, char *with)
     return result;
 }
 
+void process_addopts(char *addopt_parm)
+{
+    char *option;
+    int a;
+    char *addopt1,*addopt;
+    int free1=0,free2=0;
+
+    if (strstr(addopt_parm,"::")) 
+    {
+        free2=1;
+        addopt1 = str_replace(addopt_parm,"::",":\x01:");
+    }
+    else addopt1 = addopt_parm;
+    if (strstr(addopt1,": :")) 
+    {
+        free1=1;
+        addopt = str_replace(addopt1,": :",":\x02:");
+    }
+    else addopt = addopt1;
+
+    for (a=0;a<10;a++) addopts[a]=NULL;
+
+    option = strtok(addopt,":");
+    if (!option)
+    {
+	return;
+    }
+    addopts[0]=malloc(strlen(option)+1);
+    memset(addopts[0],0,strlen(option)+1);
+    strcpy(addopts[0],option);
+    a=0;
+    while ( ((option=strtok(NULL,":"))!=NULL)&&(a<9))
+    {
+        a++;
+        addopts[a]=malloc(strlen(option)+1);
+        memset(addopts[a],0,strlen(option)+1);
+        strcpy(addopts[a],option);
+    }
+    if (free2) free(addopt1);
+    if (free1) free(addopt);
+}
+
+
+unsigned char* hash_memmem(unsigned char* haystack, int hlen, char* needle, int nlen) 
+{
+    if (nlen > hlen) return 0;
+    int i,j=0;
+    switch(nlen) {
+    case 0:
+            return haystack;
+    case 1:
+        return memchr(haystack, needle[0], hlen);
+    case 2:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+                if (*(uint16_t*)(haystack+i)==*(uint16_t*)needle) 
+                {
+                    return haystack+i;
+                }
+        }
+        break;
+    case 4:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+            if (*(uint32_t*)(haystack+i)==*(uint32_t*)needle) 
+            {
+                return haystack+i;
+            }
+        }
+        break;
+    default:
+        for (i=0; i<hlen-nlen+1; i++) 
+        {
+            if (haystack[i]==needle[j]) 
+            {
+                if (j==nlen-1) 
+                {
+                    return haystack+i-j;
+                } 
+                else 
+                {
+                    j++;
+                }
+            } 
+            else 
+            {
+                i-=j;
+                j=0;
+            }
+        }
+    }
+    return NULL;
+}

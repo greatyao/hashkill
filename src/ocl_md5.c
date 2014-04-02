@@ -397,30 +397,22 @@ static void ocl_execute(cl_command_queue queue, cl_kernel kernel, size_t *global
 	}
     }
     else
-    for (try=0;try<4;try++)
+    {
+	_clEnqueueNDRangeKernel(queue, kernel, 2, NULL, global_work_size, local_work_size, 0, NULL, NULL);
+	found = _clEnqueueMapBuffer(queue, found_buf, CL_TRUE,CL_MAP_READ, 0, 4, 0, 0, NULL, &err);
+	if (*found>0) 
 	{
-	    lglobal_work_size[0]=global_work_size[0];
-	    lglobal_work_size[1]=(global_work_size[1]+3)/4;
-	    offset[1] = try*lglobal_work_size[1];
-	    offset[0] = 0;
-	    if (attack_over!=0) pthread_exit(NULL);
-	    cl_event ev;
-		_clEnqueueNDRangeKernel(queue, kernel, 2, offset, lglobal_work_size, local_work_size, 0, NULL, &ev);
-	    _clWaitForEvents(1, &ev);
-		found = _clEnqueueMapBuffer(queue, found_buf, CL_TRUE,CL_MAP_READ, 0, 4, 0, 0, NULL, &err);
-	    if (*found>0) 
-	    {
-    		ocl_get_cracked(queue,plains_buf,plains, hashes_buf,hashes, *found, wthreads[self].vectorsize, hash_ret_len);
-    		bzero(plains,16*8*MAXFOUND);
-    		_clEnqueueWriteBuffer(queue, plains_buf, CL_FALSE, 0, 16*8*MAXFOUND, plains, 0, NULL, NULL);
-    		// Change for other types
-    		bzero(hashes,hash_ret_len*8*MAXFOUND);
-    		_clEnqueueWriteBuffer(queue, hashes_buf, CL_FALSE, 0, hash_ret_len*8*MAXFOUND, hashes, 0, NULL, NULL);
-    		*found = 0;
-    		_clEnqueueWriteBuffer(queue, found_buf, CL_FALSE, 0, 4, found, 0, NULL, NULL);
-	    }
-    	    _clEnqueueUnmapMemObject(queue,found_buf,(void *)found,0,NULL,NULL);
+    	    ocl_get_cracked(queue,plains_buf,plains, hashes_buf,hashes, *found, wthreads[self].vectorsize, hash_ret_len);
+    	    bzero(plains,16*8*MAXFOUND);
+    	    _clEnqueueWriteBuffer(queue, plains_buf, CL_FALSE, 0, 16*8*MAXFOUND, plains, 0, NULL, NULL);
+    	    // Change for other types
+    	    bzero(hashes,hash_ret_len*8*MAXFOUND);
+    	    _clEnqueueWriteBuffer(queue, hashes_buf, CL_FALSE, 0, hash_ret_len*8*MAXFOUND, hashes, 0, NULL, NULL);
+    	    *found = 0;
+    	    _clEnqueueWriteBuffer(queue, found_buf, CL_TRUE, 0, 4, found, 0, NULL, NULL);
 	}
+    	_clEnqueueUnmapMemObject(queue,found_buf,(void *)found,0,NULL,NULL);
+    }
     wthreads[self].tries += charset_size*charset_size*charset_size*charset_size*wthreads[self].loops;
     attack_current_count += wthreads[self].loops;
 }
@@ -545,10 +537,8 @@ void* ocl_bruteforce_md5_thread(void *arg)
 
     global_work_size[0] = (charset_size*charset_size);
     global_work_size[1] = (charset_size*charset_size);
-	hlog("--align global_work_size %dx%d\n", global_work_size[0], global_work_size[1]);
     while ((global_work_size[0] % local_work_size[0])!=0) global_work_size[0]++;
     while ((global_work_size[1] % (wthreads[self].vectorsize))!=0) global_work_size[1]++;
-    hlog("++align global_work_size %dx%d -- %d\n", global_work_size[0], global_work_size[1], wthreads[self].vectorsize);
     global_work_size[1] = global_work_size[1]/wthreads[self].vectorsize;
     image.x=image.y=image.z=image.w=0;
     pthread_mutex_unlock(&biglock); 
@@ -2656,8 +2646,7 @@ hash_stat ocl_bruteforce_md5(void)
 
     init_bruteforce_long();
     scheduler_setup(bruteforce_start, 5, bruteforce_end, strlen(bruteforce_charset), strlen(bruteforce_charset));
-    hlog("nwthreads = %d\n", nwthreads);
-	for (i=0;i<nwthreads;i++) if (wthreads[i].type!=cpu_thread)
+    for (i=0;i<nwthreads;i++) if (wthreads[i].type!=cpu_thread)
     {
         _clGetDeviceIDs(platform[wthreads[i].platform], CL_DEVICE_TYPE_GPU, 64, device, (cl_uint *)&devicesnum);
     	context[i] = _clCreateContext(NULL, 1, &device[wthreads[i].deviceid], NULL, NULL, &err);
@@ -2671,7 +2660,6 @@ hash_stat ocl_bruteforce_md5(void)
     	    bzero(pbuf,100);
     	    char kernelfile[255];
     	    _clGetDeviceInfo(device[wthreads[i].deviceid], CL_DEVICE_NAME, sizeof(pbuf),pbuf, NULL );
-#if 1
     	    if (hash_list->next) 
     	    {
     	        sprintf(kernelfile,"%s/hashkill/kernels/amd_md5_long__%s.bin",DATADIR,pbuf);
@@ -2679,18 +2667,14 @@ hash_stat ocl_bruteforce_md5(void)
     	    else
     	    {
     	        sprintf(kernelfile,"%s/hashkill/kernels/amd_md5_long_S_%s.bin",DATADIR,pbuf);
-			}
+	    }
 
     	    char *ofname = kernel_decompress(kernelfile);
     	    if (!ofname) return hash_err;
     	    fp=fopen(ofname,"r");
-#else
-    	    sprintf(kernelfile,"%s/hashkill/kernels/amd_md5_long.cl",DATADIR,pbuf);
-    	    fp=fopen(kernelfile,"r");
-#endif
     	    if (!fp) 
     	    {
-				elog("Can't open kernel: %s\n",kernelfile);
+        	elog("Can't open kernel: %s\n",kernelfile);
             	exit(1);
     	    }
     	    fseek(fp, 0, SEEK_END);
@@ -2699,16 +2683,10 @@ hash_stat ocl_bruteforce_md5(void)
     	    binary=malloc(binary_size);
     	    fread(binary,binary_size,1,fp);
     	    fclose(fp);
-#if 1
     	    unlink(ofname);
     	    free(ofname);
-#endif
     	    if (wthreads[i].first==1) hlog("Loading kernel: %s\n",kernelfile);
-#if 1
     	    program[i] = _clCreateProgramWithBinary(context[i], 1, &device[wthreads[i].deviceid], (size_t *)&binary_size, (const unsigned char **)&binary, NULL, &err );
-#else
-    	    program[i] = _clCreateProgramWithSource(context[i],  1, &binary, NULL, &err );
-#endif
     	    _clBuildProgram(program[i], 1, &device[wthreads[i].deviceid], "", NULL, NULL );
     	    free(binary);
     	}
@@ -2771,7 +2749,6 @@ hash_stat ocl_bruteforce_md5(void)
     {
         worker_thread_keys[a]=a;
         pthread_create(&crack_threads[a], NULL, ocl_bruteforce_md5_thread, &worker_thread_keys[a]);
-		hlog("Create crack_threads %d\n", crack_threads[a]);
     }
 
     for (a=0;a<nwthreads;a++) if (wthreads[a].type!=cpu_thread) pthread_join(crack_threads[a], NULL);

@@ -73,6 +73,7 @@ static void usage(const char *progname)
     printf("-D, --gpu-double \t\t  GPU 2x mode. Better speeds, but less scallable. \n");
     printf("-T, --gpu-temp \t\t\t  GPU temperature threshold (default:90 deg celsius). \n");
     printf("-t, --gpu-platform \t\t  OpenCL platform (default:0). \n");
+    printf("-A, --gpu-device \t\t  OpenCL devices (default:all). \n");
     printf("-i, --interactive-mode \t\t  Interactive mode (reduce flicker and tearing). \n");
     printf("-a, --add-opts \t\t\t  Additional options (for rule-based attacks). \n");
 
@@ -231,7 +232,7 @@ static hash_stat parse_bruteforce_args(char *bruteargs)
 
 }
 
-
+#if 0
 /* Process additional options */
 void process_addopts(char *addopt_parm)
 {
@@ -273,6 +274,7 @@ void process_addopts(char *addopt_parm)
     if (free2) free(addopt1);
     if (free1) free(addopt);
 }
+#endif
 
 
 
@@ -333,13 +335,14 @@ int main(int argc, char *argv[])
 	{"gpu-double", 0, 0, 'D'},
 	{"gpu-temp", 0, 0, 'T'},
 	{"gpu-platform", 0, 0, 't'},
+	{"gpu-device", 0, 0, 'A'},
 	{"add-opts", 0, 0, 'a'},
 	{0, 0, 0, 0}
     };
 
     /* initialize */
     printf("\n");
-	char cmd[256];
+	char cmd[256] = {0};
 	readlink("/proc/self/exe", cmd, sizeof(cmd));
     hlog("Version %s\n", PACKAGE_VERSION);
     hlog("Path %s\n", cmd);
@@ -384,7 +387,7 @@ int main(int argc, char *argv[])
 //    setenv("GPU_USE_SYNC_OBJECTS","1",1);
 
     /* See if someone tried to pipe to stdin */
-    detect_pipe();
+    //detect_pipe();
     disable_term_linebuffer();
 
 #ifndef HAVE_JSON_JSON_H
@@ -401,7 +404,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, sigint_handler);
 
     opterr = 0;
-    while ((option = getopt_long(argc, argv, "p:f:d:P::b::t:T:S::s:o:O:N:n:M::m:hicFDG:C:a:T:r:R",long_options, &option_index)) != -1)
+    while ((option = getopt_long(argc, argv, "p:f:d:P::b::t:A:T:S::s:o:O:N:n:M::m:hicFDG:C:a:T:r:R",long_options, &option_index)) != -1)
     switch (option)
     {
 	case 'r':
@@ -453,7 +456,7 @@ int main(int argc, char *argv[])
 
 	case 'P':
 	    if (!optarg) (void)print_plugins_summary(DATADIR"/hashkill/plugins");
-	    else print_plugin_detailed(optarg);
+		else print_plugin_detailed(optarg);
     	    exit(EXIT_SUCCESS);
 	break;
 
@@ -556,6 +559,23 @@ int main(int argc, char *argv[])
 
         case 't':
 	    ocl_gpu_platform = atoi(optarg);
+	break;
+	
+	case 'A':
+	{
+		char temp[128];
+		char *p;
+		char *lasts = NULL;
+		strcpy(temp, optarg);
+		ocl_gpu_device_num = 0;
+		p = strtok_r(temp, ",", &lasts);
+	    while (p!=NULL)
+	    {
+			ocl_gpu_devices[ocl_gpu_device_num++] = atoi(p);
+			printf("device %d\n", atoi(p));
+			p = strtok_r(NULL, ",", &lasts);
+		}
+	}
 	break;
 
         

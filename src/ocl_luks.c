@@ -52,6 +52,9 @@ static int hash_ret_len1=32;
 #define LUKS_DIGESTSIZE 20
 #define LUKS_SALTSIZE 32
 #define LUKS_NUMKEYS 8
+#ifndef O_LARGEFILE
+#define O_LARGEFILE 0
+#endif
 
 /* Taken from LUKS on disk format specification */
 struct luks_phdr {
@@ -82,7 +85,7 @@ static unsigned int bestslot=0;
 
 
 
-void XORblock(char *src1, char *src2, char *dst, int n)
+static void XORblock(char *src1, char *src2, char *dst, int n)
 {
     int j;
 
@@ -122,7 +125,7 @@ static int diffuse(unsigned char *src, unsigned char *dst, int size)
 
 
 
-extern int AF_merge(unsigned char *src, unsigned char *dst, int afsize, int stripes)
+static  int AF_merge(unsigned char *src, unsigned char *dst, int afsize, int stripes)
 {
     int i;
     char *bufblock;
@@ -189,7 +192,7 @@ hash_stat load_luks(char *filename)
     int readbytes;
     unsigned int bestiter=0xFFFFFFFF;
 
-    myfile = open(filename, O_RDONLY/*|O_LARGEFILE*/);
+    myfile = open(filename, O_RDONLY|O_LARGEFILE);
     if (myfile<1) 
     {
 	return hash_err;

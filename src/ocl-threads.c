@@ -54,11 +54,11 @@ struct ocl_supported_plugins_s ocl_supported_plugins[] =
                             {1,"md5md5",&ocl_bruteforce_md5md5, &ocl_markov_md5md5, &ocl_rule_md5md5},
                             {1,"mysql5",&ocl_bruteforce_mysql5, &ocl_markov_mysql5, &ocl_rule_mysql5},
                             //{1,"mysql-old",&ocl_bruteforce_mysql_old, &ocl_markov_mysql_old, &ocl_rule_mysql_old},
+                            //{1,"test",&ocl_bruteforce_test, &ocl_markov_test, &ocl_rule_test},
                             {1,"sha256",&ocl_bruteforce_sha256, &ocl_markov_sha256, &ocl_rule_sha256},
                             {1,"sha512",&ocl_bruteforce_sha512, &ocl_markov_sha512, &ocl_rule_sha512},
                             {1,"lm",&ocl_bruteforce_lm, &ocl_markov_lm, &ocl_rule_lm},
                             {1,"nsldap",&ocl_bruteforce_nsldap, &ocl_markov_nsldap, &ocl_rule_nsldap},
-                            {1,"sl3",&ocl_bruteforce_sl3, &ocl_bruteforce_sl3, &ocl_bruteforce_sl3},
                             {1,"joomla",&ocl_bruteforce_joomla, &ocl_markov_joomla, &ocl_rule_joomla},
                             {1,"oscommerce",&ocl_bruteforce_oscommerce, &ocl_markov_oscommerce, &ocl_rule_oscommerce},
                             {1,"ipb2",&ocl_bruteforce_ipb2, &ocl_markov_ipb2, &ocl_rule_ipb2},
@@ -92,7 +92,24 @@ struct ocl_supported_plugins_s ocl_supported_plugins[] =
                             {1,"mssql-2012",&ocl_bruteforce_mssql_2012, &ocl_markov_mssql_2012, &ocl_rule_mssql_2012},
                             {1,"msoffice",&ocl_bruteforce_msoffice, &ocl_markov_msoffice, &ocl_rule_msoffice},
                             {1,"luks",&ocl_bruteforce_luks, &ocl_markov_luks, &ocl_rule_luks},
-							{1,"pdf",&ocl_bruteforce_pdf, &ocl_markov_pdf, &ocl_rule_pdf},
+                            {1,"ripemd160",&ocl_bruteforce_ripemd160, &ocl_markov_ripemd160, &ocl_rule_ripemd160},
+                            {1,"whirlpool",&ocl_bruteforce_whirlpool, &ocl_markov_whirlpool, &ocl_rule_whirlpool},
+                            {1,"truecrypt",&ocl_bruteforce_truecrypt, &ocl_markov_truecrypt, &ocl_rule_truecrypt},
+                            {1,"lastpass",&ocl_bruteforce_lastpass, &ocl_markov_lastpass, &ocl_rule_lastpass},
+                            {1,"keepass",&ocl_bruteforce_keepass, &ocl_markov_keepass, &ocl_rule_keepass},
+                            {1,"mozilla",&ocl_bruteforce_mozilla, &ocl_markov_mozilla, &ocl_rule_mozilla},
+                            {1,"pwsafe",&ocl_bruteforce_pwsafe, &ocl_markov_pwsafe, &ocl_rule_pwsafe},
+                            {1,"keyring",&ocl_bruteforce_keyring, &ocl_markov_keyring, &ocl_rule_keyring},
+                            {1,"kwallet",&ocl_bruteforce_kwallet, &ocl_markov_kwallet, &ocl_rule_kwallet},
+                            {1,"msoffice-old",&ocl_bruteforce_msoffice_old, &ocl_markov_msoffice_old, &ocl_rule_msoffice_old},
+                            {1,"pdf",&ocl_bruteforce_pdf, &ocl_markov_pdf, &ocl_rule_pdf},
+                            {1,"sha384",&ocl_bruteforce_sha384, &ocl_markov_sha384, &ocl_rule_sha384},
+                            {1,"odf",&ocl_bruteforce_odf, &ocl_markov_odf, &ocl_rule_odf},
+                            {1,"grub2",&ocl_bruteforce_grub2, &ocl_markov_grub2, &ocl_rule_grub2},
+                            {1,"osx-ml",&ocl_bruteforce_osx_ml, &ocl_markov_osx_ml, &ocl_rule_osx_ml},
+                            {1,"androidfde",&ocl_bruteforce_androidfde, &ocl_markov_androidfde, &ocl_rule_androidfde},
+                            {1,"androidpin",&ocl_bruteforce_androidpin, &ocl_markov_androidpin, &ocl_rule_androidpin},
+                            {1,"a51",&ocl_bruteforce_a51, &ocl_markov_a51, &ocl_rule_a51},
                             {0, "", NULL, NULL, NULL}
                         };
 
@@ -157,6 +174,7 @@ hash_stat ocl_get_device()
     int ocl_vector=1;
     int ocl_have_old_ati;
     int ocl_have_sm21;
+    int ocl_have_sm10;
     int ocl_have_69xx;
     int ocl_have_gcn;
 
@@ -187,6 +205,7 @@ hash_stat ocl_get_device()
 	    ocl_have_old_ati = 0;
 	    ocl_dev_nvidia = 0;
 	    ocl_have_sm21 = 0;
+	    ocl_have_sm10 = 0;
 	    ocl_have_69xx = 0;
 	    ocl_have_gcn = 0;
 	    ocl_threads = 2;
@@ -222,6 +241,7 @@ hash_stat ocl_get_device()
         		_clGetDeviceInfoNoErr(device_id[a], CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &compute_capability_major, NULL);
             		_clGetDeviceInfoNoErr(device_id[a], CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV, sizeof(cl_uint), &compute_capability_minor, NULL);
             		if ((compute_capability_major==2)&&(compute_capability_minor==1)) ocl_have_sm21 = 1;
+            		if ((compute_capability_major==1)&&(compute_capability_minor==0)) ocl_have_sm10 = 1;
 			break;
 		    }
 	    }
@@ -248,7 +268,7 @@ hash_stat ocl_get_device()
     	    {
 		if ((strcmp(get_current_plugin(),"sha1")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"sha256")==0)) ocl_vector=4;
-		if ((strcmp(get_current_plugin(),"sl3")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"ripemd160")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"md5md5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"mysql5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"nsldap")==0)) ocl_vector=4;
@@ -266,16 +286,19 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"desunix")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"phpbb3")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"osx-old")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"zip")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"o5logon")==0)) {ocl_vector=1;loops=1;}
+		if ((strcmp(get_current_plugin(),"mozilla")==0)) {ocl_vector=1;loops=1;}
 	    }
 	    /* GCN loops hacks */
 	    if ((ocl_have_gcn==1)&&(!ocl_dev_nvidia))
 	    {
-		if ((strcmp(get_current_plugin(),"sl3")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"sha1")==0)) loops=2;
+		if ((strcmp(get_current_plugin(),"ripemd160")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"nsldap")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"nsldaps")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"smf")==0)) loops=2;
@@ -285,15 +308,19 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"lm")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"desunix")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) loops=1;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) loops=1;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"osx-old")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"oracle11g")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"mscash")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"oracle-old")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"o5logon")==0)) {ocl_vector=1;loops=1;}
+		if ((strcmp(get_current_plugin(),"mozilla")==0)) {ocl_vector=1;loops=1;}
 		if ((strcmp(get_current_plugin(),"vbulletin")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"ipb2")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"joomla")==0)) loops=2;
+		if ((strcmp(get_current_plugin(),"androidpin")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"oscommerce")==0)) loops=2;
 	    }
 
@@ -301,10 +328,15 @@ hash_stat ocl_get_device()
 	    if ((attack_method==attack_method_rule)&&(ocl_dev_nvidia==0))
 	    {
 		/* Global */
+		if ((strcmp(get_current_plugin(),"test")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"msoffice-old")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"lm")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"desunix")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"joomla")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"androidpin")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"oscommerce")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"ipb2")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"sha256")==0)) ocl_vector=4;
@@ -317,6 +349,7 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"nsldap")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"vbulletin")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"joomla")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"androidpin")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"oscommerce")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"osx-old")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) ocl_vector=2;
@@ -326,16 +359,22 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"drupal7")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"sha256unix")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"sha512unix")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"grub2")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"osx-ml")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"oracle-old")==0)) {ocl_vector=1;loops=2;}
 		if ((strcmp(get_current_plugin(),"mysql5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"mscash")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"md5")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"md4")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"sha1")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"ripemd160")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"ntlm")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"md5md5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"oracle-old")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"o5logon")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"keepass")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"mozilla")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"pdf")==0)) ocl_vector=1;
 
 		/* GCN/VLIW-specific */
 		if ((strcmp(get_current_plugin(),"phpbb3")==0)&&(ocl_have_gcn)) ocl_vector=1;
@@ -352,12 +391,26 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"wpa")==0)&&(!ocl_have_gcn)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"luks")==0)&&(ocl_have_gcn)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"luks")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"androidfde")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"androidfde")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"truecrypt")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"truecrypt")==0)&&(!ocl_have_gcn)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"dmg")==0)&&(ocl_have_gcn)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"dmg")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"odf")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"odf")==0)&&(!ocl_have_gcn)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"rar")==0)&&(ocl_have_gcn)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"rar")==0)&&(!ocl_have_gcn)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"django256")==0)&&(!ocl_have_gcn)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"django256")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"pwsafe")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"pwsafe")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"keyring")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"keyring")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"kwallet")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"kwallet")==0)&&(ocl_have_gcn)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"lastpass")==0)&&(!ocl_have_gcn)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"lastpass")==0)&&(ocl_have_gcn)) ocl_vector=1;
 	    }
 
 
@@ -366,6 +419,9 @@ hash_stat ocl_get_device()
 	    {
 		if ((strcmp(get_current_plugin(),"oracle-old")==0)) {loops=1;ocl_vector=1;}
 		if ((strcmp(get_current_plugin(),"rar")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"msoffice-old")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"keepass")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"mozilla")==0)) {ocl_vector=1;loops=1;}
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) {ocl_vector=1;loops=1;}
 		if ((strcmp(get_current_plugin(),"mscash")==0)) {loops=2;ocl_vector=1;}
 		if ((strcmp(get_current_plugin(),"oracle11g")==0)) {ocl_vector=1;loops=2;}
@@ -380,20 +436,29 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"bfunix")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"drupal7")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"sha512unix")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"grub2")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"osx-ml")==0)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"oracle-old")==0)) {ocl_vector=2;loops=1;}
 		if ((strcmp(get_current_plugin(),"oracle11g")==0)) {ocl_vector=4;loops=1;}
 		if ((strcmp(get_current_plugin(),"lm")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) {ocl_vector=2;loops=1;}
 		if ((strcmp(get_current_plugin(),"zip")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"mscash")==0)) {loops=1;ocl_vector=8;}
 		if ((strcmp(get_current_plugin(),"smf")==0)) {ocl_vector=4;loops=1;}
 		if ((strcmp(get_current_plugin(),"django256")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"pwsafe")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"keyring")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"kwallet")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"lastpass")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"rar")==0)) ocl_vector=2;
 	    }
 	    else if (ocl_dev_nvidia==1)
 	    {
-		if ((strcmp(get_current_plugin(),"sl3")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"sha1")==0)) loops=2;
+		if ((strcmp(get_current_plugin(),"ripemd160")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"nsldap")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"nsldaps")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"smf")==0)) loops=2;
@@ -403,6 +468,8 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"lm")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"desunix")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) loops=1;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) loops=1;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"osxlion")==0)) loops=1;
 		if ((strcmp(get_current_plugin(),"osx-old")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"oracle11g")==0)) loops=2;
@@ -412,6 +479,7 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"vbulletin")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"ipb2")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"joomla")==0)) loops=2;
+		if ((strcmp(get_current_plugin(),"androidpin")==0)) loops=2;
 		if ((strcmp(get_current_plugin(),"oscommerce")==0)) loops=2;
 	    }
 
@@ -434,18 +502,28 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"wpa")==0)&&(ocl_have_sm21)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"luks")==0)&&(!ocl_have_sm21)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"luks")==0)&&(ocl_have_sm21)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"androidfde")==0)&&(!ocl_have_sm21)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"androidfde")==0)&&(ocl_have_sm21)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"truecrypt")==0)&&(!ocl_have_sm21)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"truecrypt")==0)&&(ocl_have_sm21)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"dmg")==0)&&(!ocl_have_sm21)) ocl_vector=1;
 		if ((strcmp(get_current_plugin(),"dmg")==0)&&(ocl_have_sm21)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"odf")==0)&&(!ocl_have_sm21)) ocl_vector=1;
+		if ((strcmp(get_current_plugin(),"odf")==0)&&(ocl_have_sm21)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"md5")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"md4")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"sha1")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"ripemd160")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"lm")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"sha256")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"sha512")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"sha384")==0)) ocl_vector=2;
+		if ((strcmp(get_current_plugin(),"whirlpool")==0)) ocl_vector=2;
 		if ((strcmp(get_current_plugin(),"ntlm")==0)) ocl_vector=8;
 		if ((strcmp(get_current_plugin(),"md5md5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"mysql5")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"joomla")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"androidpin")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"oscommerce")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"nsldap")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"ipb2")==0)) ocl_vector=4;
@@ -462,6 +540,7 @@ hash_stat ocl_get_device()
 		if ((strcmp(get_current_plugin(),"smf")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"vbulletin")==0)) ocl_vector=4;
 		if ((strcmp(get_current_plugin(),"o5logon")==0)) ocl_vector=4;
+		if ((strcmp(get_current_plugin(),"pdf")==0)) ocl_vector=1;
 	    }
 
 	    /* Zip (non-rule) exception for NVidia */
@@ -475,6 +554,21 @@ hash_stat ocl_get_device()
 	    {
 		loops*=2;
 	    }
+		
+		if(ocl_gpu_device_num > 0)
+		{
+			int found = 0;
+			int ii;
+			for(ii = 0; ii < ocl_gpu_device_num; ii++)
+			{
+				if(ocl_gpu_devices[ii] == a)
+				{
+					found = 1;
+					break;
+				}
+			}
+			if(found == 0) continue;
+		}
 	
 	    /* Now add collected information to wthreads */
 	    for (b=0;b<ocl_threads;b++)
@@ -489,6 +583,7 @@ hash_stat ocl_get_device()
 		wthreads[nwthreads].loops = loops;
 		wthreads[nwthreads].cldeviceid = device_id[a];
 		wthreads[nwthreads].ocl_have_sm21 = ocl_have_sm21;
+		wthreads[nwthreads].ocl_have_sm10 = ocl_have_sm10;
 		wthreads[nwthreads].ocl_have_vliw4 = ocl_have_69xx;
 		wthreads[nwthreads].ocl_have_gcn = ocl_have_gcn;
 		wthreads[nwthreads].ocl_have_old_ati = ocl_have_old_ati;
@@ -496,7 +591,6 @@ hash_stat ocl_get_device()
 		wthreads[nwthreads].oldtries = 0;
 		wthreads[nwthreads].templocked = 0;
 		sprintf(wthreads[nwthreads].adaptername,"%s", devicename);
-		hlog("wthread[%d] %s\n", nwthreads, devicename);
 		nwthreads++;
 	    }
 	}
@@ -663,11 +757,6 @@ static void * ocl_start_monitor_thread(void *arg)
     while ((wthreads[0].tries==0)&&(attack_over==0)) usleep(10000);
     printf("\n");
 
-    if ((strcmp(get_current_plugin(),"sl3")==0)) 
-    {
-	strcpy(bruteforce_charset,"0123456789");
-	attack_method=attack_method_simple_bruteforce;
-    }
 
     while (attack_over == 0)
     {
@@ -1166,7 +1255,7 @@ hash_stat ocl_spawn_threads(unsigned int num, unsigned int queue_size)
         return hash_err;
     }
     
-    if (attack_method == attack_method_markov)
+    if ((attack_method == attack_method_markov)&&(strcmp(get_current_plugin(),"a51")!=0))
     {
         hlog("Markov max len: %d threshold:%d\n",markov_max_len, markov_threshold);
         hlog("Progress indicator will be available once Markov calculations are done...\n%s","");
@@ -1202,7 +1291,7 @@ void rule_offload_add_none(callback_final_t cb, int self)
 {
     char str[32];
 
-    bzero(str,32);
+    memset(str,0,32);
     cb(str,self);
 }
 

@@ -38,7 +38,9 @@
 #include "hashgen.h"
 #include "hashgen-mangle.h"
 
-
+#ifndef O_LARGEFILE
+#define O_LARGEFILE 0
+#endif
 
 #define BREAKPOINT(line1,line2,index,self) \
 			if (attack_over!=0) \
@@ -370,7 +372,7 @@ void node_add_dict(char *line, char *stack,int ind,int self)
 	    }
 	    if (st.st_size<MAX_MMAP_INITIAL)
 	    {
-		fd = open(nextname, O_RDONLY/*|O_LARGEFILE*/);
+		fd = open(nextname, O_RDONLY|O_LARGEFILE);
 		if (fd<0)
 		{
 		    elog("Cannot open %s?!?\n",nextname);
@@ -856,11 +858,11 @@ void node_add_binstrings(char *line, char *stack,int ind,int self)
 	    BREAKPOINT(cline,stack,ind,self);
 	}
 
-	fd=open(ops[self][ind].params,O_RDONLY/*|O_LARGEFILE*/);
+	fd=open(ops[self][ind].params,O_RDONLY|O_LARGEFILE);
 	if (fd<0) 
 	{
 	    sprintf(nextname,DATADIR"/hashkill/dict/%s",ops[self][ind].params);
-	    fd=open(nextname,O_RDONLY/*|O_LARGEFILE*/);
+	    fd=open(nextname,O_RDONLY|O_LARGEFILE);
 	    if (fd<0)
 	    {
 		hg_elog("Could not open binfile: %s\n",nextname);
@@ -915,11 +917,11 @@ void node_add_binstrings(char *line, char *stack,int ind,int self)
 	    BREAKPOINT(line,cline,ind,self);
 	}
 
-	fd=open(ops[self][ind].params,O_RDONLY/*|O_LARGEFILE*/);
+	fd=open(ops[self][ind].params,O_RDONLY|O_LARGEFILE);
 	if (fd<0) 
 	{
 	    sprintf(nextname,DATADIR"/hashkill/dict/%s",ops[self][ind].params);
-	    fd=open(nextname,O_RDONLY/*|O_LARGEFILE*/);
+	    fd=open(nextname,O_RDONLY|O_LARGEFILE);
 	    if (fd<0)
 	    {
 		hg_elog("Could not open binfile: %s\n",nextname);

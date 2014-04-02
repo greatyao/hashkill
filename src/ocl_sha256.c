@@ -375,9 +375,7 @@ static void ocl_execute(cl_command_queue queue, cl_kernel kernel, size_t *global
 	    offset[1] = try*lglobal_work_size[1];
 	    offset[0] = 0;
 	    if (attack_over!=0) pthread_exit(NULL);
-	    cl_event ev;
-		_clEnqueueNDRangeKernel(queue, kernel, 2, offset, lglobal_work_size, local_work_size, 0, NULL, &ev);
-	    _clWaitForEvents(1, &ev);
+	    _clEnqueueNDRangeKernel(queue, kernel, 2, offset, lglobal_work_size, local_work_size, 0, NULL, NULL);
 	    found = _clEnqueueMapBuffer(queue, found_buf, CL_TRUE,CL_MAP_READ, 0, 4, 0, 0, NULL, &err);
 	    if (*found>0) 
 	    {
@@ -542,12 +540,9 @@ void* ocl_bruteforce_sha256_thread(void *arg)
 
     global_work_size[0] = (charset_size*charset_size);
     global_work_size[1] = (charset_size*charset_size);
-	hlog("--global_work_size %dx%d\n", global_work_size[0], global_work_size[1]);
     while ((global_work_size[0] % local_work_size[0])!=0) global_work_size[0]++;
     while ((global_work_size[1] % (wthreads[self].vectorsize))!=0) global_work_size[1]++;
-    hlog("++global_work_size %dx%d\n", global_work_size[0], global_work_size[1]);
     global_work_size[1] = global_work_size[1]/wthreads[self].vectorsize;
-    hlog("@@global_work_size %dx%d\n", global_work_size[0], global_work_size[1]);
     image.x=image.y=image.z=image.w=0;
     pthread_mutex_unlock(&biglock); 
 

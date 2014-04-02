@@ -32,7 +32,7 @@
 #define HASHKILL_VERSION PACKAGE_VERSION		// hashkill version
 #define HASHKILL_MAXTHREADS (unsigned int)128		// maximum threads
 #define HASHKILL_MAXQUEUESIZE 128 			// maximum queue size
-#define HASHFILE_MAX_LINE_LENGTH 256			// maximum line length
+#define HASHFILE_MAX_LINE_LENGTH 4096			// maximum line length
 #define HASHFILE_MAX_PLAIN_LENGTH 128
 #define VECTORSIZE 128
 #define THREAD_LENPROVIDED 1000
@@ -115,10 +115,11 @@ typedef struct workthreads_s
     pthread_mutex_t tempmutex;	// Used to lock the thread (ADL)
     int templocked;		// Device is locked cause of overheating
     int ocl_have_sm21;		// Device is sm_21 ?
+    int ocl_have_sm10;		// Device is sm_10 ?
     int ocl_have_old_ati;	// Device is 4xxx ?
     int ocl_have_vliw4;		// Device is VLIW4 ?
     int ocl_have_gcn;		// Device is GCN?
-    uint64_t tries;		// c/s on that thread since last check
+    volatile uint64_t tries;	// c/s on that thread since last check
     int currentsalt;		// GPU only: salt# increment
     uint64_t oldtries;		// c/s on that thread before last check
     int temperature;		// Temperature
@@ -162,7 +163,7 @@ pthread_t scheduler_thread;
 attack_method_t attack_method;
 int hash_ret_len;
 int single_hash;
-uint64_t attack_overall_count;
+volatile uint64_t attack_overall_count;
 uint64_t attack_current_count;
 uint64_t attack_checkpoints;
 uint64_t attack_avgspeed;;
@@ -170,7 +171,7 @@ uint64_t attack_avgspeed;;
 
 /* Global variables needed by modules */
 char hashlist_file[255];		// Hashlist file
-char hash_cmdline[255];			// Hash from cmdline
+char hash_cmdline[HASHFILE_MAX_LINE_LENGTH]; // Hash from cmdline
 char bruteforce_set1[255];		// Bruteforce set1
 char bruteforce_set2[255];		// Bruteforce set1
 int bruteforce_start;			// Min len of bruteforce candidates
@@ -197,6 +198,8 @@ int ctrl_c_pressed;			// User pressed ctrl-c?
 int ocl_gpu_double;			// GPU double mode
 int ocl_gpu_platform;			// GPU double mode
 int ocl_gpu_tempthreshold;		// Temperature threshold
+int ocl_gpu_devices[16];
+int ocl_gpu_device_num;
 char *rule_file;			// Rule file to process
 int hash_len;				// hash length
 char *out_cracked_file;			// output hashes file 
@@ -205,6 +208,8 @@ char *addopts[10];			// Additional options
 hash_stat have_ocl;			// OCL attack?
 int salt_size;				// salt size as returned by plugin
 char *markovstat;			// Markov statfile
+char *additional_options;		// -A addopts
+char *padditional_options;		// -a addopts
 
 /* List manipulation routines */
 hash_stat add_hash_list(char *username, char *hash, char *salt, char *salt2);
@@ -235,6 +240,7 @@ hash_stat hash_proto_md4(char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE],
 hash_stat hash_proto_md4_unicode(char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len,int threadid);
 void hash_proto_md4_slow(char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE],int threadid);
 void hash_proto_ripemd160(const char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
+void hash_proto_whirlpool(const char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
 void hash_proto_md5_hex(const char *hash[VECTORSIZE],  char *hashhex[VECTORSIZE]);
 hash_stat hash_proto_sha1(char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len, int threadid);
 void hash_proto_sha1_unicode(char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
@@ -243,6 +249,7 @@ void hash_proto_sha1_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]
 void hash_proto_sha256_unicode(const char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
 void hash_proto_sha256_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]);
 void hash_proto_sha512_unicode(const char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
+void hash_proto_sha384_unicode(const char *plaintext[VECTORSIZE], char *hashmd5[VECTORSIZE], int len[VECTORSIZE]);
 void hash_proto_sha512_hex(const char *hash[VECTORSIZE], char *hashhex[VECTORSIZE]);
 hash_stat hash_proto_fcrypt(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]);
 hash_stat hash_proto_fcrypt_slow(const char *password[VECTORSIZE], const char *salt, char *ret[VECTORSIZE]);
@@ -254,7 +261,9 @@ void hash_proto_pbkdf2_256_len(const char *pass, int passlen, unsigned char *sal
 void hash_proto_hmac_sha1_file(void *key, int keylen, char *filename, long offset, long size, unsigned char *output, int outputlen);
 void hash_proto_hmac_sha1(void *key, int keylen, unsigned char *data, int datalen, unsigned char *output, int outputlen);
 void hash_proto_hmac_md5(void *key, int keylen, unsigned char *data, int datalen, unsigned char *output, int outputlen);
-void hash_proto_pbkdf512(const char *pass, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out);
+void hash_proto_pbkdf512(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out);
+void hash_proto_pbkdfrmd160(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out);
+void hash_proto_pbkdfwhirlpool(const char *pass, int len, unsigned char *salt, int saltlen, int iter, int keylen, unsigned char *out);
 void hash_proto_aes_encrypt(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode);
 void hash_proto_aes_decrypt(const unsigned char *key, int keysize, const unsigned char *in, int len, unsigned char *vec, unsigned char *out, int mode);
 void hash_proto_des_ecb_encrypt(const unsigned char *key, int keysize, const unsigned char *in[VECTORSIZE], int len, unsigned char *out[VECTORSIZE], int mode);
@@ -266,6 +275,10 @@ void hash_proto_lm_slow(const unsigned char *in[VECTORSIZE], unsigned char *out[
 void hash_proto_aes_cbc_encrypt(const unsigned char *in,unsigned char *out,unsigned long length,AES_KEY *key,unsigned char ivec[16],int oper);
 int hash_proto_aes_set_encrypt_key(const unsigned char *userKey,const int bits,AES_KEY *key);
 int hash_proto_aes_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key);
+void hash_proto_decrypt_aes_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block);
+void hash_proto_decrypt_twofish_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block);
+void hash_proto_decrypt_serpent_xts(char *key1, char *key2, char *in, char *out, int len, int sector, int cur_block);
+
 void scheduler_init();
 void scheduler_setup(int curlen, int startlen, int maxlen, int charset_size, int charset_size2);
 int sched_s1();
@@ -289,4 +302,6 @@ hash_stat create_hash_indexes(void);
 /* util functions */
 void disable_term_linebuffer(void);
 char *str_replace(char *orig, char *rep, char *with);
+void process_addopts(char *addopt_parm);
+unsigned char* hash_memmem(unsigned char* haystack, int hlen, char* needle, int nlen);
 #endif

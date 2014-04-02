@@ -51,8 +51,6 @@ hash_stat ocl_bruteforce_md5md5(void);
 hash_stat ocl_markov_md5md5(void);
 hash_stat ocl_rule_md5md5(void);
 
-/* sl3 plugin support */
-hash_stat ocl_bruteforce_sl3(void);
 
 /* mysql5 plugin support */
 hash_stat ocl_bruteforce_mysql5(void);
@@ -252,11 +250,103 @@ hash_stat ocl_bruteforce_luks(void);
 hash_stat ocl_markov_luks(void);
 hash_stat ocl_rule_luks(void);
 
+/* ripemd160 plugin support */
+hash_stat ocl_bruteforce_ripemd160(void);
+hash_stat ocl_markov_ripemd160(void);
+hash_stat ocl_rule_ripemd160(void);
+
+/* whirlpool plugin support */
+hash_stat ocl_bruteforce_whirlpool(void);
+hash_stat ocl_markov_whirlpool(void);
+hash_stat ocl_rule_whirlpool(void);
+
+/* truecrypt plugin support */
+hash_stat ocl_bruteforce_truecrypt(void);
+hash_stat ocl_markov_truecrypt(void);
+hash_stat ocl_rule_truecrypt(void);
+
+/* lastpass plugin support */
+hash_stat ocl_bruteforce_lastpass(void);
+hash_stat ocl_markov_lastpass(void);
+hash_stat ocl_rule_lastpass(void);
+
+/* keepass plugin support */
+hash_stat ocl_bruteforce_keepass(void);
+hash_stat ocl_markov_keepass(void);
+hash_stat ocl_rule_keepass(void);
+
+/* mozilla plugin support */
+hash_stat ocl_bruteforce_mozilla(void);
+hash_stat ocl_markov_mozilla(void);
+hash_stat ocl_rule_mozilla(void);
+
+/* pwsafe plugin support */
+hash_stat ocl_bruteforce_pwsafe(void);
+hash_stat ocl_markov_pwsafe(void);
+hash_stat ocl_rule_pwsafe(void);
+
+/* keyring plugin support */
+hash_stat ocl_bruteforce_keyring(void);
+hash_stat ocl_markov_keyring(void);
+hash_stat ocl_rule_keyring(void);
+
+/* kwallet plugin support */
+hash_stat ocl_bruteforce_kwallet(void);
+hash_stat ocl_markov_kwallet(void);
+hash_stat ocl_rule_kwallet(void);
+
+/* msoffice-old plugin support */
+hash_stat ocl_bruteforce_msoffice_old(void);
+hash_stat ocl_markov_msoffice_old(void);
+hash_stat ocl_rule_msoffice_old(void);
+
 /* pdf plugin support */
 hash_stat ocl_bruteforce_pdf(void);
 hash_stat ocl_markov_pdf(void);
 hash_stat ocl_rule_pdf(void);
 
+/* sha384 plugin support */
+hash_stat ocl_bruteforce_sha384(void);
+hash_stat ocl_markov_sha384(void);
+hash_stat ocl_rule_sha384(void);
+
+/* odf plugin support */
+hash_stat ocl_bruteforce_odf(void);
+hash_stat ocl_markov_odf(void);
+hash_stat ocl_rule_odf(void);
+
+/* grub2 plugin support */
+hash_stat ocl_bruteforce_grub2(void);
+hash_stat ocl_markov_grub2(void);
+hash_stat ocl_rule_grub2(void);
+
+/* androidfde plugin support */
+hash_stat ocl_bruteforce_androidfde(void);
+hash_stat ocl_markov_androidfde(void);
+hash_stat ocl_rule_androidfde(void);
+
+/* androidpin plugin support */
+hash_stat ocl_bruteforce_androidpin(void);
+hash_stat ocl_markov_androidpin(void);
+hash_stat ocl_rule_androidpin(void);
+
+/* osx-ml plugin support */
+hash_stat ocl_bruteforce_osx_ml(void);
+hash_stat ocl_markov_osx_ml(void);
+hash_stat ocl_rule_osx_ml(void);
+
+
+/* a51 plugin support */
+hash_stat ocl_bruteforce_a51(void);
+hash_stat ocl_markov_a51(void);
+hash_stat ocl_rule_a51(void);
+
+
+
+/* test plugin support */
+//hash_stat ocl_bruteforce_test(void);
+//hash_stat ocl_markov_test(void);
+//hash_stat ocl_rule_test(void);
 
 /* supported plugins struct array*/
 struct ocl_supported_plugins_s

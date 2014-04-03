@@ -6,7 +6,7 @@ endif
 LZMA_SRC = ../../lzma/7zFile.c ../../lzma/7zStream.c ../../lzma/LzmaDec.c ../../lzma/LzmaEnc.c ../../lzma/Alloc.c ../../lzma/LzFind.c ../../lzma/lzma.c -I../..
 OPENCL_SRC = ../../ocl-base.c
 
-all: build
+all: #build
 
 build: 
 	# AMD

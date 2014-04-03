@@ -135,7 +135,7 @@ hash_stat load_androidfde(char *filename)
     int myfile;
     int cnt;
 
-    myfile = open(filename, O_RDONLY|O_LARGEFILE);
+    myfile = open(filename, O_RDONLY/*|O_LARGEFILE*/);
     if (myfile<1) 
     {
         return hash_err;

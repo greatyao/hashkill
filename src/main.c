@@ -303,8 +303,8 @@ int main(int argc, char *argv[])
 	{"cpu-threads", 1, 0, 'C'},
 	{"gpu-double", 0, 0, 'D'},
 	{"gpu-temp", 0, 0, 'T'},
-	{"gpu-platform", 0, 0, 't'},
-	{"gpu-device", 0, 0, 'B'},
+	{"gpu-platform", 1, 0, 't'},
+	{"gpu-device", 1, 0, 'B'},
 	{"add-opts", 0, 0, 'a'},
 	{"plugin-opts", 0, 0, 'A'},
 	{0, 0, 0, 0}
